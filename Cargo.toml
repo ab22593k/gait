@@ -6,4 +6,3 @@ members = [
 resolver = "3"
 
 [workspace.dependencies]
-# Shared dependencies can be defined here
