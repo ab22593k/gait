@@ -15,7 +15,13 @@ pub struct RepositoryConfiguration {
 }
 
 impl RepositoryConfiguration {
-    pub fn new(url: String, branch: String, target_path: String, filters: Vec<String>, commit_hash: Option<String>) -> Self {
+    pub fn new(
+        url: String,
+        branch: String,
+        target_path: String,
+        filters: Vec<String>,
+        commit_hash: Option<String>,
+    ) -> Self {
         Self {
             url,
             branch,

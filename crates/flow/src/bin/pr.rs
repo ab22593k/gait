@@ -3,7 +3,10 @@ use clap::Parser;
 use gwtflow::common::CommonParams;
 
 #[derive(Parser)]
-#[command(name = "git-flow-pr", about = "Generate a pull request description using AI")]
+#[command(
+    name = "git-flow-pr",
+    about = "Generate a pull request description using AI"
+)]
 struct PrArgs {
     #[command(flatten)]
     common: CommonParams,
@@ -42,9 +45,9 @@ struct PrArgs {
 #[tokio::main]
 async fn main() -> Result<()> {
     gwtflow::logger::init().expect("Failed to initialize logger");
-    
+
     let args = PrArgs::parse();
-    
+
     match gwtflow::cli::handle_pr(
         args.common,
         args.print,

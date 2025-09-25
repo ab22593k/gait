@@ -3,7 +3,10 @@ use clap::Parser;
 use gwtflow::common::CommonParams;
 
 #[derive(Parser)]
-#[command(name = "git-flow-config", about = "Configure Git-Iris settings and providers")]
+#[command(
+    name = "git-flow-config",
+    about = "Configure Git-Iris settings and providers"
+)]
 struct ConfigArgs {
     #[command(flatten)]
     common: CommonParams,
@@ -31,17 +34,16 @@ struct ConfigArgs {
 #[tokio::main]
 async fn main() -> Result<()> {
     gwtflow::logger::init().expect("Failed to initialize logger");
-    
+
     let args = ConfigArgs::parse();
-    
+
     match gwtflow::cli::handle_config(
         &args.common,
         args.api_key,
         args.model,
         args.token_limit,
         args.param,
-    )
-    {
+    ) {
         Ok(()) => Ok(()),
         Err(e) => {
             eprintln!("Error: {e}");

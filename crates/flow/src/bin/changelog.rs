@@ -40,9 +40,9 @@ struct ChangelogArgs {
 #[tokio::main]
 async fn main() -> Result<()> {
     gwtflow::logger::init().expect("Failed to initialize logger");
-    
+
     let args = ChangelogArgs::parse();
-    
+
     match gwtflow::cli::handle_changelog(
         args.common,
         args.from,

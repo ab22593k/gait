@@ -32,9 +32,9 @@ struct ReleaseNotesArgs {
 #[tokio::main]
 async fn main() -> Result<()> {
     gwtflow::logger::init().expect("Failed to initialize logger");
-    
+
     let args = ReleaseNotesArgs::parse();
-    
+
     match gwtflow::cli::handle_release_notes(
         args.common,
         args.from,

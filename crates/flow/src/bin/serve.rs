@@ -2,7 +2,10 @@ use anyhow::Result;
 use clap::Parser;
 
 #[derive(Parser)]
-#[command(name = "git-flow-serve", about = "Start an MCP server to provide Git-Iris functionality to AI tools")]
+#[command(
+    name = "git-flow-serve",
+    about = "Start an MCP server to provide Git-Iris functionality to AI tools"
+)]
 struct ServeArgs {
     /// Enable development mode with more verbose logging
     #[arg(long, help = "Enable development mode with more verbose logging")]
@@ -33,16 +36,10 @@ struct ServeArgs {
 #[tokio::main]
 async fn main() -> Result<()> {
     gwtflow::logger::init().expect("Failed to initialize logger");
-    
+
     let args = ServeArgs::parse();
-    
-    match gwtflow::cli::handle_serve(
-        args.dev,
-        args.transport,
-        args.port,
-        args.listen_address,
-    )
-    .await
+
+    match gwtflow::cli::handle_serve(args.dev, args.transport, args.port, args.listen_address).await
     {
         Ok(()) => Ok(()),
         Err(e) => {

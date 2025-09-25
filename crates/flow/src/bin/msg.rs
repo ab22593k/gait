@@ -38,9 +38,9 @@ struct MsgArgs {
 #[tokio::main]
 async fn main() -> Result<()> {
     gwtflow::logger::init().expect("Failed to initialize logger");
-    
+
     let args = MsgArgs::parse();
-    
+
     match cli::handle_cmsg(
         args.common,
         CmsgConfig {

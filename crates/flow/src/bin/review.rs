@@ -49,9 +49,9 @@ struct ReviewArgs {
 #[tokio::main]
 async fn main() -> Result<()> {
     gwtflow::logger::init().expect("Failed to initialize logger");
-    
+
     let args = ReviewArgs::parse();
-    
+
     match gwtflow::cli::handle_review(
         args.common,
         args.print,
