@@ -9,7 +9,6 @@ Ritex is a Rust workspace project that provides AI-powered Git workflow assistan
   - `git-wire` - Git subcommand for declarative cross-repository code synchronization
 - `/src/` - Main entry point
 - `/commands/` - AI command workflow definitions (TOML files)
-- `/.specify/` - Specification and planning system templates and scripts
 
 ## Crates
 
