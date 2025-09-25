@@ -1,7 +1,9 @@
 [package]
 name = "gwtwire"
-version = "0.1.0"
-edition = "2024"
+description = "Wires part of other repository's source code into the repository in a declarative manner."
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
 
 [[bin]]
 name = "git-wire"

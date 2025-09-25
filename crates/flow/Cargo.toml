@@ -1,12 +1,9 @@
 [package]
 name = "gwtflow"
-version = "0.1.0"
-edition = "2024"
-description = "AI-powered Git workflow assistant"
-readme = "README.md"
-license = "Apache-2.0"
-keywords = ["git", "AI", "devtools", "productivity"]
-categories = ["command-line-utilities", "development-tools"]
+description = "Workflow assistant for smart commits, code reviews, changelogs, and release notes."
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
 
 [lib]
 name = "gwtflow"
@@ -157,40 +154,3 @@ result_large_err = { level = "warn", priority = 35 }
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
-
-[package.metadata.deb]
-maintainer = "Stefanie Jane <stef@hyperbliss.tech>"
-copyright = "2024, Git-Iris Contributors <https://github.com/hyperb1iss/git-iris>"
-license-file = ["LICENSE", "4"]
-extended-description = """
-Git-Iris is an AI-powered tool designed to generate meaningful and context-aware Git commit messages.
-"""
-depends = "$auto"
-section = "utility"
-priority = "optional"
-# Assets will be resolved relative to target directory by cargo-deb when using --target
-assets = [
-    [
-        "release/ritex-flow",
-        "usr/bin/",
-        "755",
-    ],
-    [
-        "README.md",
-        "usr/share/doc/ritex-flow/README",
-        "644",
-    ],
-    [
-        "git-iris.1",
-        "usr/share/man/man1/ritex-flow.1",
-        "644",
-    ],
-]
-
-[package.metadata.generate-rpm]
-# Assets will be resolved relative to target directory by cargo-generate-rpm when using --target
-assets = [
-    { source = "release/git-iris", dest = "/usr/bin/ritex-flow", mode = "755" },
-    { source = "README.md", dest = "/usr/share/doc/ritex-flow/README", mode = "644" },
-    { source = "ritex-flow.1", dest = "/usr/share/man/man1/ritex-flow.1", mode = "644" },
-]
