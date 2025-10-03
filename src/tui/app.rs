@@ -32,7 +32,7 @@ impl TuiCommit {
         user_name: String,
         user_email: String,
         service: Arc<CommitService>,
-        use_gitmoji: bool,
+        use_emoji: bool,
     ) -> Self {
         let state = TuiState::new(
             initial_messages,
@@ -40,7 +40,7 @@ impl TuiCommit {
             preset,
             user_name,
             user_email,
-            use_gitmoji,
+            use_emoji,
         );
 
         Self { state, service }
@@ -54,7 +54,7 @@ impl TuiCommit {
         user_name: String,
         user_email: String,
         service: Arc<CommitService>,
-        use_gitmoji: bool,
+        use_emoji: bool,
     ) -> Result<()> {
         let mut app = Self::new(
             initial_messages,
@@ -63,7 +63,7 @@ impl TuiCommit {
             user_name,
             user_email,
             service,
-            use_gitmoji,
+            use_emoji,
         );
 
         app.run_app().map_err(Error::from)
@@ -236,7 +236,7 @@ pub async fn run_tui_commit(
     user_name: String,
     user_email: String,
     service: Arc<CommitService>,
-    use_gitmoji: bool,
+    use_emoji: bool,
 ) -> Result<()> {
     TuiCommit::run(
         initial_messages,
@@ -245,7 +245,7 @@ pub async fn run_tui_commit(
         user_name,
         user_email,
         service,
-        use_gitmoji,
+        use_emoji,
     )
     .await
 }

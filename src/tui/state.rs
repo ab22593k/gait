@@ -6,6 +6,7 @@ use ratatui::widgets::ListState;
 use tui_textarea::TextArea;
 
 use super::spinner::SpinnerState;
+use super::theme::Theme;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Mode {
@@ -15,7 +16,9 @@ pub enum Mode {
     EditingUserInfo,
     SelectingEmoji,
     SelectingPreset,
+    SelectingTheme,
     Generating,
+    Help,
 }
 
 #[derive(PartialEq, Eq)]
@@ -45,6 +48,8 @@ pub struct TuiState {
     pub emoji_list_state: ListState,
     pub preset_list: Vec<(String, String, String, String)>,
     pub preset_list_state: ListState,
+    pub theme_list: Vec<Theme>,
+    pub theme_list_state: ListState,
     pub user_name: String,
     pub user_email: String,
     pub user_name_textarea: TextArea<'static>,
@@ -54,6 +59,7 @@ pub struct TuiState {
     pub dirty: bool, // Used to track if we need to redraw
     pub last_spinner_update: std::time::Instant,
     pub emoji_mode: EmojiMode,
+    pub theme: Theme,
 }
 
 impl TuiState {
@@ -63,7 +69,7 @@ impl TuiState {
         preset: String,
         user_name: String,
         user_email: String,
-        use_gitmoji: bool,
+        use_emoji: bool,
     ) -> Self {
         let mut message_textarea = TextArea::default();
         let messages = if initial_messages.is_empty() {
@@ -113,6 +119,10 @@ impl TuiState {
         let mut preset_list_state = ListState::default();
         preset_list_state.select(Some(0));
 
+        let theme_list = Theme::all_themes();
+        let mut theme_list_state = ListState::default();
+        theme_list_state.select(Some(0));
+
         let mut user_name_textarea = TextArea::default();
         user_name_textarea.insert_str(&user_name);
         let mut user_email_textarea = TextArea::default();
@@ -130,13 +140,15 @@ impl TuiState {
             instructions_textarea,
             emoji_list,
             emoji_list_state,
-            emoji_mode: if use_gitmoji {
+            emoji_mode: if use_emoji {
                 EmojiMode::Auto
             } else {
                 EmojiMode::None
             },
             preset_list,
             preset_list_state,
+            theme_list,
+            theme_list_state,
             user_name,
             user_email,
             user_name_textarea,
@@ -145,6 +157,7 @@ impl TuiState {
             spinner: None,
             dirty: true,
             last_spinner_update: std::time::Instant::now(),
+            theme: Theme::default(),
         }
     }
 

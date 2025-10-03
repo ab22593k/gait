@@ -19,7 +19,9 @@ pub fn handle_input(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
         Mode::EditingInstructions => handle_editing_instructions(app, key),
         Mode::SelectingEmoji => handle_selecting_emoji(app, key),
         Mode::SelectingPreset => handle_selecting_preset(app, key),
+        Mode::SelectingTheme => handle_selecting_theme(app, key),
         Mode::EditingUserInfo => handle_editing_user_info(app, key),
+        Mode::Help => handle_help(app, key),
         Mode::Generating => {
             if key.code == KeyCode::Esc {
                 app.state.mode = Mode::Normal;
@@ -66,6 +68,13 @@ fn handle_normal_mode(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
             ));
             InputResult::Continue
         }
+        KeyCode::Char('t') => {
+            app.state.mode = Mode::SelectingTheme;
+            app.state.set_status(String::from(
+                "Selecting theme. Use arrow keys and Enter to select, Esc to cancel.",
+            ));
+            InputResult::Continue
+        }
         KeyCode::Char('r') => {
             app.handle_regenerate();
             InputResult::Continue
@@ -105,6 +114,11 @@ fn handle_normal_mode(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
             app.state.spinner = Some(SpinnerState::new());
 
             InputResult::Commit(commit_message)
+        }
+        KeyCode::Char('?') => {
+            app.state.mode = Mode::Help;
+            app.state.set_status(String::from("Viewing help. Press any key to close."));
+            InputResult::Continue
         }
         KeyCode::Esc => InputResult::Exit,
         _ => InputResult::Continue,
@@ -312,6 +326,51 @@ fn handle_editing_user_info(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
             InputResult::Continue
         }
     }
+}
+
+fn handle_selecting_theme(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
+    match key.code {
+        KeyCode::Esc => {
+            app.state.mode = Mode::Normal;
+            app.state
+                .set_status(String::from("Theme selection cancelled."));
+            InputResult::Continue
+        }
+        KeyCode::Enter => {
+            if let Some(selected) = app.state.theme_list_state.selected() {
+                app.state.theme = app.state.theme_list[selected].clone();
+                app.state.mode = Mode::Normal;
+                app.state.set_status(format!(
+                    "Theme changed to: {}",
+                    app.state.theme.name
+                ));
+            }
+            InputResult::Continue
+        }
+        KeyCode::Up => {
+            let selected = app.state.theme_list_state.selected().unwrap_or(0);
+            let new_selected = if selected > 0 {
+                selected - 1
+            } else {
+                app.state.theme_list.len() - 1
+            };
+            app.state.theme_list_state.select(Some(new_selected));
+            InputResult::Continue
+        }
+        KeyCode::Down => {
+            let selected = app.state.theme_list_state.selected().unwrap_or(0);
+            let new_selected = (selected + 1) % app.state.theme_list.len();
+            app.state.theme_list_state.select(Some(new_selected));
+            InputResult::Continue
+        }
+        _ => InputResult::Continue,
+    }
+}
+
+fn handle_help(app: &mut TuiCommit, _key: KeyEvent) -> InputResult {
+    app.state.mode = Mode::Normal;
+    app.state.set_status(String::from("Help closed."));
+    InputResult::Continue
 }
 
 fn is_emoji(c: char) -> bool {
