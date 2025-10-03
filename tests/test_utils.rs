@@ -440,7 +440,7 @@ impl MockDataBuilder {
     /// Create a mock Config with gitmoji enabled
     pub fn config_with_gitmoji() -> Config {
         Config {
-            use_gitmoji: true,
+            use_emoji: true,
             ..Default::default()
         }
     }

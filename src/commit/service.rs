@@ -25,7 +25,7 @@ pub struct CommitService {
 }
 
 impl CommitService {
-    /// Create a new `IrisCommitService` instance
+    /// Create a new `CommitService` instance
     ///
     /// # Arguments
     ///
@@ -38,7 +38,7 @@ impl CommitService {
     ///
     /// # Returns
     ///
-    /// A Result containing the new `IrisCommitService` instance or an error
+    /// A Result containing the new `CommitService` instance or an error
     pub fn new(
         config: Config,
         _repo_path: &Path,

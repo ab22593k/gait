@@ -5,7 +5,7 @@ mod tests {
     use gitpilot::{
         config::Config,
         git::GitRepo,
-        mcp::tools::{GitIrisTools, PrTool, ReleaseNotesTool, utils::GitIrisTool},
+        mcp::tools::{PilotTools, PrTool, ReleaseNotesTool, utils::PilotTool},
     };
 
     use rmcp::model::{Content, RawContent};
@@ -83,20 +83,20 @@ mod tests {
             "version_name": ""
         }));
 
-        // Add tool name to parameters for GitIrisTools::try_from
+        // Add tool name to parameters for PilotTools::try_from
         let mut params = args.clone();
         params.insert(
             "name".to_string(),
-            Value::String("git_iris_release_notes".to_string()),
+            Value::String("gitpilot_release_notes".to_string()),
         );
 
-        // Convert to our GitIrisTools enum
+        // Convert to our PilotTools enum
         let tool_params =
-            GitIrisTools::try_from(params).expect("Failed to convert parameters to GitIrisTools");
+            PilotTools::try_from(params).expect("Failed to convert parameters to PilotTools");
 
         // Verify the tool was created correctly
         match tool_params {
-            GitIrisTools::ReleaseNotesTool(tool) => {
+            PilotTools::ReleaseNotesTool(tool) => {
                 assert_eq!(tool.from, "HEAD~5", "From field not set correctly");
                 assert_eq!(tool.to, "HEAD", "To field not set correctly");
                 assert_eq!(
@@ -109,19 +109,19 @@ mod tests {
                 );
                 assert_eq!(tool.version_name, "", "Version name not set correctly");
             }
-            GitIrisTools::ChangelogTool(_) => {
+            PilotTools::ChangelogTool(_) => {
                 // Not testing this variant in this test
                 println!("ChangelogTool variant not being tested in this test");
             }
-            GitIrisTools::CommitTool(_) => {
+            PilotTools::CommitTool(_) => {
                 // Not testing this variant in this test
                 println!("CommitTool variant not being tested in this test");
             }
-            GitIrisTools::CodeReviewTool(_) => {
+            PilotTools::CodeReviewTool(_) => {
                 // Not testing this variant in this test
                 println!("CodeReviewTool variant not being tested in this test");
             }
-            GitIrisTools::PrTool(_) => {
+            PilotTools::PrTool(_) => {
                 // Not testing this variant in this test
                 println!("PrTool variant not being tested in this test");
             }
@@ -131,29 +131,29 @@ mod tests {
     #[tokio::test]
     async fn test_mcp_tools_include_pr_tool() {
         // Test that the PR tool is included in the available tools
-        let tools = GitIrisTools::get_tools();
+        let tools = PilotTools::get_tools();
 
         // Should have 5 tools now (including the new PR tool)
         assert_eq!(tools.len(), 5);
 
-        // Check that git_iris_pr is included
-        let pr_tool_exists = tools.iter().any(|tool| tool.name == "git_iris_pr");
-        assert!(pr_tool_exists, "git_iris_pr tool should be available");
+        // Check that gitpilot_pr is included
+        let pr_tool_exists = tools.iter().any(|tool| tool.name == "gitpilot_pr");
+        assert!(pr_tool_exists, "gitpilot_pr tool should be available");
 
         // Check that all expected tools are present
         let tool_names: Vec<&str> = tools.iter().map(|tool| tool.name.as_ref()).collect();
-        assert!(tool_names.contains(&"git_iris_commit"));
-        assert!(tool_names.contains(&"git_iris_code_review"));
-        assert!(tool_names.contains(&"git_iris_pr"));
-        assert!(tool_names.contains(&"git_iris_changelog"));
-        assert!(tool_names.contains(&"git_iris_release_notes"));
+        assert!(tool_names.contains(&"gitpilot_commit"));
+        assert!(tool_names.contains(&"gitpilot_review"));
+        assert!(tool_names.contains(&"gitpilot_pr"));
+        assert!(tool_names.contains(&"gitpilot_changelog"));
+        assert!(tool_names.contains(&"gitpilot_release_notes"));
     }
 
     #[test]
     fn test_pr_tool_definition() {
         let tool = PrTool::get_tool_definition();
 
-        assert_eq!(tool.name, "git_iris_pr");
+        assert_eq!(tool.name, "gitpilot_pr");
         assert!(tool.description.contains("pull request descriptions"));
         assert!(tool.description.contains("atomic unit"));
 

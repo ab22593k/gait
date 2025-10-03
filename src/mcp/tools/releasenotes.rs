@@ -3,12 +3,12 @@
 //! This module provides the MCP tool for generating release notes.
 
 use crate::changes::ReleaseNotesGenerator;
-use crate::config::Config as GitIrisConfig;
+use crate::config::Config as PilotConfig;
 use crate::git::GitRepo;
 use crate::log_debug;
 use crate::mcp::tools::utils::{
-    GitIrisTool, apply_custom_instructions, create_text_result, parse_detail_level,
-    resolve_git_repo, validate_repository_parameter,
+    PilotTool, apply_custom_instructions, create_text_result, parse_detail_level, resolve_git_repo,
+    validate_repository_parameter,
 };
 
 use rmcp::handler::server::tool::cached_schema_for_type;
@@ -49,7 +49,7 @@ impl ReleaseNotesTool {
     /// Returns the tool definition for the release notes tool
     pub fn get_tool_definition() -> Tool {
         Tool {
-            name: Cow::Borrowed("git_iris_release_notes"),
+            name: Cow::Borrowed("gitpilot_release_notes"),
             description: Cow::Borrowed(
                 "Generate comprehensive release notes between two Git references",
             ),
@@ -59,12 +59,12 @@ impl ReleaseNotesTool {
 }
 
 #[async_trait::async_trait]
-impl GitIrisTool for ReleaseNotesTool {
+impl PilotTool for ReleaseNotesTool {
     /// Execute the release notes tool with the provided repository and configuration
     async fn execute(
         &self,
         git_repo: Arc<GitRepo>,
-        config: GitIrisConfig,
+        config: PilotConfig,
     ) -> Result<CallToolResult, anyhow::Error> {
         log_debug!("Generating release notes with: {:?}", self);
 

@@ -510,7 +510,7 @@ fn test_toml_analyzer() {
     // Test metadata extraction
     let content = r#"
 [package]
-name = "git-iris"
+name = "gitpilot"
 version = "0.2.0"
 authors = ["Author <author@example.com>"]
 

@@ -1,7 +1,7 @@
-//! Model Context Protocol (MCP) integration for Git-Iris
+//! Model Context Protocol (MCP) integration
 //!
 //! This module contains the implementation of the MCP server
-//! that allows Git-Iris to be used directly from compatible
+//! that allows GitPilot to be used directly from compatible
 //! LLM-powered tools and assistants.
 
 pub mod config;

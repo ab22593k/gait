@@ -357,7 +357,7 @@ fn test_branch_parameter_validation() {
 // 3. The command itself primarily handles user interface concerns
 //
 // For thorough testing, we would need to:
-// - Mock the IrisCommitService
+// - Mock the CommitService
 // - Mock the git info generation
 // - Mock the LLM response
 // - Capture stdout to verify output

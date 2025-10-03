@@ -1,13 +1,13 @@
-//! MCP server implementation for Git-Iris
+//! MCP server implementation
 //!
 //! This module contains the implementation of the MCP server
-//! that allows Git-Iris to be used directly from compatible tools.
+//! that allows GitPilot to be used directly from compatible tools.
 
-use crate::config::Config as GitIrisConfig;
+use crate::config::Config as GitPilotConfig;
 use crate::git::GitRepo;
 use crate::log_debug;
 use crate::mcp::config::{MCPServerConfig, MCPTransportType};
-use crate::mcp::tools::GitIrisHandler;
+use crate::mcp::tools::PilotHandler;
 
 use anyhow::{Context, Result};
 use rmcp::ServiceExt;
@@ -21,7 +21,7 @@ pub async fn serve(config: MCPServerConfig) -> Result<()> {
     // Configure logging based on transport type and dev mode
     if config.dev_mode {
         // In dev mode, set up appropriate logging
-        let log_path = format!("git-iris-mcp-{}.log", std::process::id());
+        let log_path = format!("gitpilot-mcp-{}.log", std::process::id());
         if let Err(e) = crate::logger::set_log_file(&log_path) {
             // For non-stdio transports, we can print this error
             if config.transport != MCPTransportType::StdIO {
@@ -46,7 +46,7 @@ pub async fn serve(config: MCPServerConfig) -> Result<()> {
     if config.transport != MCPTransportType::StdIO {
         use crate::ui;
         ui::print_info(&format!(
-            "Starting Git-Iris MCP server with {:?} transport",
+            "Starting GitPilot MCP server with {:?} transport",
             config.transport
         ));
         if let Some(port) = config.port {
@@ -72,12 +72,11 @@ pub async fn serve(config: MCPServerConfig) -> Result<()> {
         git_repo.repo_path().display()
     );
 
-    // Load Git-Iris configuration
-    let git_iris_config = GitIrisConfig::load()?;
-    log_debug!("Loaded Git-Iris configuration");
+    let pilot_config = GitPilotConfig::load()?;
+    log_debug!("Loaded GitPilot configuration");
 
     // Create the handler with necessary dependencies
-    let handler = GitIrisHandler::new(git_repo, git_iris_config);
+    let handler = PilotHandler::new(git_repo, pilot_config);
 
     // Start the appropriate transport
     match config.transport {
@@ -91,7 +90,7 @@ pub async fn serve(config: MCPServerConfig) -> Result<()> {
 }
 
 /// Start the MCP server using `StdIO` transport
-async fn serve_stdio(handler: GitIrisHandler, _dev_mode: bool) -> Result<()> {
+async fn serve_stdio(handler: PilotHandler, _dev_mode: bool) -> Result<()> {
     log_debug!("Starting MCP server with StdIO transport");
 
     let transport = (stdin(), stdout());
@@ -107,7 +106,7 @@ async fn serve_stdio(handler: GitIrisHandler, _dev_mode: bool) -> Result<()> {
 }
 
 /// Start the MCP server using SSE transport
-async fn serve_sse(handler: GitIrisHandler, socket_addr: SocketAddr) -> Result<()> {
+async fn serve_sse(handler: PilotHandler, socket_addr: SocketAddr) -> Result<()> {
     log_debug!("Starting MCP server with SSE transport on {}", socket_addr);
 
     // Create and start the SSE server

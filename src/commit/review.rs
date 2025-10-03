@@ -569,7 +569,7 @@ fn validate_preset_for_review(common: &CommonParams) {
         ui::print_warning(
             "The specified preset may not be suitable for code reviews. Consider using a review or general preset instead.",
         );
-        ui::print_info("Run 'git-iris list-presets' to see available presets for reviews.");
+        ui::print_info("Run 'gitpilot presets' to see available presets for reviews.");
     }
 }
 
@@ -625,7 +625,7 @@ fn setup_review_service(
             false, // verification not needed for review
             git_repo,
         )
-        .context("Failed to create IrisCommitService")?,
+        .context("Failed to create CommitService")?,
     );
 
     // Check environment prerequisites
@@ -636,7 +636,6 @@ fn setup_review_service(
         ui::print_info(
             "2. You are running this command from within a Git repository or provide a repository URL with --repo.",
         );
-        ui::print_info("3. You have set up your configuration using 'git-iris config'.");
         return Err(e);
     }
 

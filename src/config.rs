@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::process::Command;
 
-/// Configuration structure for the Git-Iris application
+/// Configuration structure
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Config {
     /// Default LLM provider
@@ -19,8 +19,8 @@ pub struct Config {
     /// Provider-specific configurations
     pub providers: HashMap<String, ProviderConfig>,
     /// Flag indicating whether to use Gitmoji
-    #[serde(default = "default_gitmoji")]
-    pub use_gitmoji: bool,
+    #[serde(default = "default_emoji")]
+    pub use_emoji: bool,
     /// Instructions for commit messages
     #[serde(default)]
     pub instructions: String,
@@ -50,7 +50,7 @@ pub struct ProviderConfig {
 }
 
 /// Default function for `use_gitmoji`
-fn default_gitmoji() -> bool {
+fn default_emoji() -> bool {
     true
 }
 
@@ -115,7 +115,7 @@ impl Config {
         Self {
             default_provider,
             providers,
-            use_gitmoji,
+            use_emoji: use_gitmoji,
             instructions,
             instruction_preset,
             temp_instructions: None,
@@ -182,7 +182,7 @@ impl Config {
         }
 
         // Override other settings
-        self.use_gitmoji = project_config.use_gitmoji;
+        self.use_emoji = project_config.use_emoji;
 
         // Always override instructions field if set in project config
         self.instructions = project_config.instructions.clone();
@@ -212,7 +212,7 @@ impl Config {
         config.set_str(&format!("{prefix}.defaultprovider"), &self.default_provider)?;
 
         // Set use gitmoji
-        config.set_bool(&format!("{prefix}.usegitmoji"), self.use_gitmoji)?;
+        config.set_bool(&format!("{prefix}.usegitmoji"), self.use_emoji)?;
 
         // Set instructions
         config.set_str(&format!("{prefix}.instructions"), &self.instructions)?;
@@ -355,7 +355,7 @@ impl Config {
             provider_config.additional_params.extend(params);
         }
         if let Some(gitmoji) = use_gitmoji {
-            self.use_gitmoji = gitmoji;
+            self.use_emoji = gitmoji;
         }
         if let Some(instr) = instructions {
             self.instructions = instr;
@@ -427,7 +427,7 @@ impl Default for Config {
         Self {
             default_provider,
             providers,
-            use_gitmoji: default_gitmoji(),
+            use_emoji: default_emoji(),
             instructions: String::new(),
             instruction_preset: default_instruction_preset(),
             temp_instructions: None,

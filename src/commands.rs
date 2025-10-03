@@ -92,9 +92,9 @@ fn apply_config_changes(
 
     // Apply gitmoji setting
     if let Some(use_gitmoji) = common.gitmoji
-        && config.use_gitmoji != use_gitmoji
+        && config.use_emoji != use_gitmoji
     {
-        config.use_gitmoji = use_gitmoji;
+        config.use_emoji = use_gitmoji;
         changes_made = true;
     }
 
@@ -189,7 +189,7 @@ pub fn handle_list_presets_command() -> Result<()> {
 
     println!(
         "{}",
-        "\nGit-Iris Instruction Presets\n".bright_magenta().bold()
+        "\ngitpilot Instruction Presets\n".bright_magenta().bold()
     );
 
     println!(
@@ -211,8 +211,8 @@ pub fn handle_list_presets_command() -> Result<()> {
     }
 
     println!("{}", "Usage:".bright_yellow().bold());
-    println!("  git-iris cmsg --preset <preset-key>");
-    println!("  git-iris review --preset <preset-key>");
+    println!("  gitpilot message --preset <preset-key>");
+    println!("  gitpilot review --preset <preset-key>");
     println!("\nPreset types: [B] = Both commands, [C] = Commit only, [R] = Review only");
 
     Ok(())

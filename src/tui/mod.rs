@@ -1,6 +1,6 @@
-//! TUI module for Git-Iris
+//! TUI module
 //!
-//! This module contains the TUI (Text User Interface) implementation for Git-Iris.
+//! This module contains the TUI (Text User Interface) implementation.
 //! It provides an interactive interface for users to generate and manage commit messages.
 
 mod app;

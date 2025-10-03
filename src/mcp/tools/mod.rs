@@ -1,7 +1,7 @@
-//! MCP tools module for Git-Iris
+//! MCP tools module
 //!
 //! This module contains the implementation of the MCP tools
-//! that expose Git-Iris functionality to MCP clients.
+//! that expose Pilot functionality to MCP clients.
 
 pub mod changelog;
 pub mod codereview;
@@ -10,10 +10,10 @@ pub mod pr;
 pub mod releasenotes;
 pub mod utils;
 
-use crate::config::Config as GitIrisConfig;
+use crate::config::Config as PilotConfig;
 use crate::git::GitRepo;
 use crate::log_debug;
-use crate::mcp::tools::utils::GitIrisTool;
+use crate::mcp::tools::utils::PilotTool;
 
 use rmcp::Error;
 use rmcp::RoleServer;
@@ -37,9 +37,9 @@ pub use self::commit::CommitTool;
 pub use self::pr::PrTool;
 pub use self::releasenotes::ReleaseNotesTool;
 
-// Define our tools for the Git-Iris toolbox
+// Define tools for Pilot toolbox
 #[derive(Debug)]
-pub enum GitIrisTools {
+pub enum PilotTools {
     ReleaseNotesTool(ReleaseNotesTool),
     ChangelogTool(ChangelogTool),
     CommitTool(CommitTool),
@@ -47,8 +47,8 @@ pub enum GitIrisTools {
     PrTool(PrTool),
 }
 
-impl GitIrisTools {
-    /// Get all tools available in Git-Iris
+impl PilotTools {
+    /// Get all tools available
     pub fn get_tools() -> Vec<Tool> {
         vec![
             ReleaseNotesTool::get_tool_definition(),
@@ -59,7 +59,7 @@ impl GitIrisTools {
         ]
     }
 
-    /// Try to convert a parameter map into a `GitIrisTools` enum
+    /// Try to convert a parameter map into a `PilotTools` enum
     pub fn try_from(params: Map<String, Value>) -> Result<Self, Error> {
         // Check the tool name and convert to the appropriate variant
         let tool_name = params
@@ -68,35 +68,35 @@ impl GitIrisTools {
             .ok_or_else(|| Error::invalid_params("Tool name not specified", None))?;
 
         match tool_name {
-            "git_iris_release_notes" => {
+            "gitpilot_release_notes" => {
                 // Convert params to ReleaseNotesTool
                 let tool: ReleaseNotesTool = serde_json::from_value(Value::Object(params))
                     .map_err(|e| Error::invalid_params(format!("Invalid parameters: {e}"), None))?;
-                Ok(GitIrisTools::ReleaseNotesTool(tool))
+                Ok(PilotTools::ReleaseNotesTool(tool))
             }
-            "git_iris_changelog" => {
+            "gitpilot_changelog" => {
                 // Convert params to ChangelogTool
                 let tool: ChangelogTool = serde_json::from_value(Value::Object(params))
                     .map_err(|e| Error::invalid_params(format!("Invalid parameters: {e}"), None))?;
-                Ok(GitIrisTools::ChangelogTool(tool))
+                Ok(PilotTools::ChangelogTool(tool))
             }
-            "git_iris_commit" => {
+            "gitpilot_commit" => {
                 // Convert params to CommitTool
                 let tool: CommitTool = serde_json::from_value(Value::Object(params))
                     .map_err(|e| Error::invalid_params(format!("Invalid parameters: {e}"), None))?;
-                Ok(GitIrisTools::CommitTool(tool))
+                Ok(PilotTools::CommitTool(tool))
             }
-            "git_iris_code_review" => {
+            "gitpilot_review" => {
                 // Convert params to CodeReviewTool
                 let tool: CodeReviewTool = serde_json::from_value(Value::Object(params))
                     .map_err(|e| Error::invalid_params(format!("Invalid parameters: {e}"), None))?;
-                Ok(GitIrisTools::CodeReviewTool(tool))
+                Ok(PilotTools::CodeReviewTool(tool))
             }
-            "git_iris_pr" => {
+            "gitpilot_pr" => {
                 // Convert params to PrTool
                 let tool: PrTool = serde_json::from_value(Value::Object(params))
                     .map_err(|e| Error::invalid_params(format!("Invalid parameters: {e}"), None))?;
-                Ok(GitIrisTools::PrTool(tool))
+                Ok(PilotTools::PrTool(tool))
             }
             _ => Err(Error::invalid_params(
                 format!("Unknown tool: {tool_name}"),
@@ -106,25 +106,24 @@ impl GitIrisTools {
     }
 }
 
-/// Common error handling for Git-Iris tools
 pub fn handle_tool_error(e: &anyhow::Error) -> Error {
     Error::invalid_params(format!("Tool execution failed: {e}"), None)
 }
 
-/// The main handler for Git-Iris, providing all MCP tools
+/// The main handler for Pilot, providing all MCP tools
 #[derive(Clone)]
-pub struct GitIrisHandler {
+pub struct PilotHandler {
     /// Git repository instance
     pub git_repo: Arc<GitRepo>,
-    /// Git-Iris configuration
-    pub config: GitIrisConfig,
+    /// Pilot configuration
+    pub config: PilotConfig,
     /// Workspace roots registered by the client
     pub workspace_roots: Arc<Mutex<Vec<PathBuf>>>,
 }
 
-impl GitIrisHandler {
-    /// Create a new Git-Iris handler with the provided dependencies
-    pub fn new(git_repo: Arc<GitRepo>, config: GitIrisConfig) -> Self {
+impl PilotHandler {
+    /// Create new handler with the provided dependencies
+    pub fn new(git_repo: Arc<GitRepo>, config: PilotConfig) -> Self {
         Self {
             git_repo,
             config,
@@ -143,10 +142,10 @@ impl GitIrisHandler {
     }
 }
 
-impl ServerHandler for GitIrisHandler {
+impl ServerHandler for PilotHandler {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
-            instructions: Some("Git-Iris is an AI-powered Git workflow assistant. You can use it to generate commit messages, review code, create changelogs and release notes.".to_string()),
+            instructions: Some("`gitpilot` is an AI-powered Git workflow assistant. You can use it to generate commit messages, review code, create changelogs and release notes.".to_string()),
             capabilities: ServerCapabilities::builder()
                 .enable_tools()
                 .build(),
@@ -186,7 +185,7 @@ impl ServerHandler for GitIrisHandler {
         _: RequestContext<RoleServer>,
     ) -> Result<ListToolsResult, Error> {
         // Use our custom method to get all tools
-        let tools = GitIrisTools::get_tools();
+        let tools = PilotTools::get_tools();
 
         Ok(ListToolsResult {
             next_cursor: None,
@@ -214,8 +213,7 @@ impl ServerHandler for GitIrisHandler {
         let mut params = args.clone();
         params.insert("name".to_string(), Value::String(request.name.to_string()));
 
-        // Try to convert to our GitIrisTools enum
-        let tool_params = GitIrisTools::try_from(params)?;
+        let tool_params = PilotTools::try_from(params)?;
 
         // Make a clone of the repository path before executing the tool
         // This prevents git2 objects from crossing async boundaries
@@ -230,25 +228,25 @@ impl ServerHandler for GitIrisHandler {
             Err(e) => return Err(handle_tool_error(&e)),
         };
 
-        // Use the GitIrisTool trait to execute any tool without matching on specific types
+        // Use the PilotTool trait to execute any tool without matching on specific types
         match tool_params {
-            GitIrisTools::ReleaseNotesTool(tool) => tool
+            PilotTools::ReleaseNotesTool(tool) => tool
                 .execute(git_repo.clone(), config.clone())
                 .await
                 .map_err(|e| handle_tool_error(&e)),
-            GitIrisTools::ChangelogTool(tool) => tool
+            PilotTools::ChangelogTool(tool) => tool
                 .execute(git_repo.clone(), config.clone())
                 .await
                 .map_err(|e| handle_tool_error(&e)),
-            GitIrisTools::CommitTool(tool) => tool
+            PilotTools::CommitTool(tool) => tool
                 .execute(git_repo.clone(), config.clone())
                 .await
                 .map_err(|e| handle_tool_error(&e)),
-            GitIrisTools::CodeReviewTool(tool) => tool
+            PilotTools::CodeReviewTool(tool) => tool
                 .execute(git_repo.clone(), config)
                 .await
                 .map_err(|e| handle_tool_error(&e)),
-            GitIrisTools::PrTool(tool) => tool
+            PilotTools::PrTool(tool) => tool
                 .execute(git_repo, config)
                 .await
                 .map_err(|e| handle_tool_error(&e)),

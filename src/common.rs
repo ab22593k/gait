@@ -49,7 +49,7 @@ pub struct CommonParams {
     /// Select an instruction preset
     #[arg(
         long,
-        help = "Select an instruction preset (use 'git-iris list-presets' to see available presets for commits and reviews)"
+        help = "Select an instruction preset (use 'gitpilot presets' to see available presets for commits and reviews)"
     )]
     pub preset: Option<String>,
 
@@ -116,9 +116,9 @@ impl CommonParams {
         }
 
         if let Some(use_gitmoji) = self.gitmoji
-            && config.use_gitmoji != use_gitmoji
+            && config.use_emoji != use_gitmoji
         {
-            config.use_gitmoji = use_gitmoji;
+            config.use_emoji = use_gitmoji;
             changes_made = true;
         }
 

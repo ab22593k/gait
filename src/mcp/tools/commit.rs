@@ -4,11 +4,11 @@
 
 use crate::commit::service::CommitService;
 use crate::commit::types::format_commit_message;
-use crate::config::Config as GitIrisConfig;
+use crate::config::Config as PilotConfig;
 use crate::git::GitRepo;
 use crate::log_debug;
 use crate::mcp::tools::utils::{
-    GitIrisTool, create_text_result, resolve_git_repo, validate_repository_parameter,
+    PilotTool, create_text_result, resolve_git_repo, validate_repository_parameter,
 };
 
 use rmcp::handler::server::tool::cached_schema_for_type;
@@ -50,7 +50,7 @@ impl CommitTool {
     /// Returns the tool definition for the commit tool
     pub fn get_tool_definition() -> Tool {
         Tool {
-            name: Cow::Borrowed("git_iris_commit"),
+            name: Cow::Borrowed("gitpilot_commit"),
             description: Cow::Borrowed("Generate commit messages and perform Git commits"),
             input_schema: cached_schema_for_type::<Self>(),
         }
@@ -58,12 +58,12 @@ impl CommitTool {
 }
 
 #[async_trait::async_trait]
-impl GitIrisTool for CommitTool {
+impl PilotTool for CommitTool {
     /// Execute the commit tool with the provided repository and configuration
     async fn execute(
         &self,
         git_repo: Arc<GitRepo>,
-        config: GitIrisConfig,
+        config: PilotConfig,
     ) -> Result<CallToolResult, anyhow::Error> {
         log_debug!("Processing commit request with: {:?}", self);
 

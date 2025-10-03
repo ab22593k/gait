@@ -79,7 +79,7 @@ pub fn print_version(version: &str) {
     if !is_quiet_mode() {
         println!(
             "{} {} {}",
-            "🔮 Git-Iris".magenta().bold(),
+            "🔮 Pilot".magenta().bold(),
             "version".cyan(),
             version.green()
         );

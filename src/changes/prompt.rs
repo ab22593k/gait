@@ -107,7 +107,7 @@ pub fn create_changelog_system_prompt(config: &Config) -> String {
 
     prompt.push_str(get_combined_instructions(config).as_str());
 
-    if config.use_gitmoji {
+    if config.use_emoji {
         prompt.push_str(
             "\n\nWhen generating the changelog, include tasteful, appropriate, and intelligent use of emojis to add visual interest.\n \
             Here are some examples of emojis you can use:\n");
@@ -225,7 +225,7 @@ pub fn create_release_notes_system_prompt(config: &Config) -> String {
 
     prompt.push_str(get_combined_instructions(config).as_str());
 
-    if config.use_gitmoji {
+    if config.use_emoji {
         prompt.push_str(
             "\n\nWhen generating the release notes, include tasteful, appropriate, and intelligent use of emojis to add visual interest.\n \
             Here are some examples of emojis you can use:\n");

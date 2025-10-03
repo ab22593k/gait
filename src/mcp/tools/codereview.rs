@@ -4,11 +4,11 @@
 //! staged changes, unstaged changes, and specific commits.
 
 use crate::commit::service::CommitService;
-use crate::config::Config as GitIrisConfig;
+use crate::config::Config as PilotConfig;
 use crate::git::GitRepo;
 use crate::log_debug;
 use crate::mcp::tools::utils::{
-    GitIrisTool, apply_custom_instructions, create_text_result, resolve_git_repo,
+    PilotTool, apply_custom_instructions, create_text_result, resolve_git_repo,
     validate_repository_parameter,
 };
 
@@ -55,7 +55,7 @@ impl CodeReviewTool {
     /// Returns the tool definition for the code review tool
     pub fn get_tool_definition() -> Tool {
         Tool {
-            name: Cow::Borrowed("git_iris_code_review"),
+            name: Cow::Borrowed("gitpilot_review"),
             description: Cow::Borrowed(
                 "Generate a comprehensive code review with options for staged changes, unstaged changes, specific commits, or branch comparisons (e.g., PR reviews)",
             ),
@@ -65,12 +65,12 @@ impl CodeReviewTool {
 }
 
 #[async_trait::async_trait]
-impl GitIrisTool for CodeReviewTool {
+impl PilotTool for CodeReviewTool {
     /// Execute the code review tool with the provided repository and configuration
     async fn execute(
         &self,
         git_repo: Arc<GitRepo>,
-        config: GitIrisConfig,
+        config: PilotConfig,
     ) -> Result<CallToolResult, anyhow::Error> {
         log_debug!("Generating code review with: {:?}", self);
 

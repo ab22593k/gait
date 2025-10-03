@@ -3,21 +3,21 @@
 //! This module provides shared functionality used across different MCP tool implementations.
 
 use crate::common::DetailLevel;
-use crate::config::Config as GitIrisConfig;
+use crate::config::Config as PilotConfig;
 use crate::git::GitRepo;
 use rmcp::model::{Annotated, CallToolResult, Content, RawContent, RawTextContent};
 use std::sync::Arc;
 
-/// Common trait for all Git-Iris MCP tools
+/// Common trait for all GitPilot MCP tools
 ///
-/// This trait defines the common interface that all Git-Iris tools must implement.
+/// This trait defines the common interface that all GitPilot tools must implement.
 #[async_trait::async_trait]
-pub trait GitIrisTool {
+pub trait PilotTool {
     /// Execute the tool with the provided repository and configuration
     async fn execute(
         &self,
         git_repo: Arc<GitRepo>,
-        config: GitIrisConfig,
+        config: PilotConfig,
     ) -> Result<CallToolResult, anyhow::Error>;
 }
 

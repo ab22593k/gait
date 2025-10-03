@@ -4,11 +4,11 @@
 
 use crate::commit::service::CommitService;
 use crate::commit::types::format_pull_request;
-use crate::config::Config as GitIrisConfig;
+use crate::config::Config as PilotConfig;
 use crate::git::GitRepo;
 use crate::log_debug;
 use crate::mcp::tools::utils::{
-    GitIrisTool, apply_custom_instructions, create_text_result, resolve_git_repo,
+    PilotTool, apply_custom_instructions, create_text_result, resolve_git_repo,
     validate_repository_parameter,
 };
 
@@ -46,7 +46,7 @@ impl PrTool {
     /// Returns the tool definition for the PR description tool
     pub fn get_tool_definition() -> Tool {
         Tool {
-            name: Cow::Borrowed("git_iris_pr"),
+            name: Cow::Borrowed("gitpilot_pr"),
             description: Cow::Borrowed(
                 "Generate comprehensive pull request descriptions for changesets spanning multiple commits. Analyzes commits and changes as an atomic unit.",
             ),
@@ -56,12 +56,12 @@ impl PrTool {
 }
 
 #[async_trait::async_trait]
-impl GitIrisTool for PrTool {
+impl PilotTool for PrTool {
     /// Execute the PR description tool with the provided repository and configuration
     async fn execute(
         &self,
         git_repo: Arc<GitRepo>,
-        config: GitIrisConfig,
+        config: PilotConfig,
     ) -> Result<CallToolResult, anyhow::Error> {
         log_debug!("Generating PR description with: {:?}", self);
 

@@ -51,7 +51,7 @@ pub fn create_system_prompt(config: &Config) -> anyhow::Result<String> {
     // Check if using conventional commits preset - if so, explicitly disable gitmoji
     let is_conventional = config.instruction_preset == "conventional";
 
-    if config.use_gitmoji && !is_conventional {
+    if config.use_emoji && !is_conventional {
         prompt.push_str(
             "\n\nUse a single gitmoji at the start of the commit message. \
           Choose the most relevant emoji from the following list:\n\n",
@@ -547,7 +547,7 @@ pub fn create_pr_system_prompt(config: &Config) -> anyhow::Result<String> {
 
     prompt.push_str(get_combined_instructions(config).as_str());
 
-    if config.use_gitmoji {
+    if config.use_emoji {
         prompt.push_str(
             "\n\nUse emojis strategically to create visual structure and reinforce section meaning. \
           Use a single gitmoji at the start of the PR title, and include emojis in section headers \

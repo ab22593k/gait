@@ -61,7 +61,7 @@ fn draw_title(f: &mut Frame, area: Rect) {
     ];
 
     // Define the title with emojis and text
-    let title_text = format!("Git-Iris v{APP_VERSION} - Cosmic Commit");
+    let title_text = format!("Pilot v{APP_VERSION} - Cosmic Commit");
     let prefix_emoji = "✨🔮 ";
     let suffix_emoji = " 🔮✨";
 

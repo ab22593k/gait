@@ -37,7 +37,7 @@ pub async fn handle_message_command(
         &common,
         repository_url,
         &config,
-        use_gitmoji && config.use_gitmoji,
+        use_gitmoji && config.use_emoji,
         verify,
     ).map_err(|e| {
         ui::print_error(&format!("Error: {e}"));
@@ -46,7 +46,6 @@ pub async fn handle_message_command(
         ui::print_info(
             "2. You are running this command from within a Git repository or provide a repository URL with --repo.",
         );
-        ui::print_info("3. You have set up your configuration using 'git-iris config'.");
         e
     })?;
 
@@ -130,7 +129,7 @@ pub async fn handle_message_command(
         git_info.user_name,
         git_info.user_email,
         service,
-        config.use_gitmoji,
+        config.use_emoji,
     )
     .await?;
 
@@ -152,7 +151,7 @@ pub async fn handle_pr_command(
         ui::print_warning(
             "The specified preset may not be suitable for PR descriptions. Consider using a review or general preset instead.",
         );
-        ui::print_info("Run 'git-iris list-presets' to see available presets for PRs.");
+        ui::print_info("Run 'gitpilot presets' to see available presets for PRs.");
     }
 
     // Validate parameter combinations
@@ -196,8 +195,8 @@ fn setup_pr_service(
         common,
         repository_url,
         config,
-        config.use_gitmoji, // Use gitmoji setting from config for PR descriptions
-        false,              // verification not needed for PR descriptions
+        config.use_emoji, // Use gitmoji setting from config for PR descriptions
+        false,            // verification not needed for PR descriptions
     )
 }
 
@@ -466,7 +465,7 @@ fn is_likely_commit_hash(reference: &str) -> bool {
     reference.len() >= 7 && reference.chars().all(|c| c.is_ascii_hexdigit())
 }
 
-/// Common function to set up `IrisCommitService`
+/// Common function to set up `CommitService`
 fn create_commit_service(
     common: &CommonParams,
     repository_url: Option<String>,
@@ -492,7 +491,7 @@ fn create_commit_service(
             verify,
             git_repo,
         )
-        .context("Failed to create IrisCommitService")?,
+        .context("Failed to create CommitService")?,
     );
 
     // Check environment prerequisites
