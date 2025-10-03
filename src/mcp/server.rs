@@ -1,7 +1,7 @@
 //! MCP server implementation
 //!
 //! This module contains the implementation of the MCP server
-//! that allows GitPilot to be used directly from compatible tools.
+//! that allows `GitPilot` to be used directly from compatible tools.
 
 use crate::config::Config as GitPilotConfig;
 use crate::git::GitRepo;

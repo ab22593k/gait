@@ -45,7 +45,7 @@ fn test_repository_deduplication_logic() {
     assert_eq!(
         repo_map
             .get("https://github.com/example/repo.git")
-            .unwrap()
+            .expect("should have example repo entry")
             .len(),
         2
     );
@@ -54,7 +54,7 @@ fn test_repository_deduplication_logic() {
     assert_eq!(
         repo_map
             .get("https://github.com/other/repo.git")
-            .unwrap()
+            .expect("should have example repo entry")
             .len(),
         1
     );

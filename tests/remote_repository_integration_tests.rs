@@ -42,7 +42,7 @@ async fn test_cli_with_remote_repository() -> Result<()> {
     };
 
     // Just testing that it doesn't panic, we're not making actual API calls
-    let result = gitv::cli::handle_command(release_notes_command, None).await;
+    let result = gitpilot::cli::handle_command(release_notes_command, None).await;
     assert!(
         result.is_err(),
         "Command should fail because we're using a mock provider"
@@ -59,7 +59,7 @@ async fn test_cli_with_remote_repository() -> Result<()> {
     };
 
     // Just testing that it doesn't panic
-    let result = gitv::cli::handle_command(changelog_command, None).await;
+    let result = gitpilot::cli::handle_command(changelog_command, None).await;
     assert!(
         result.is_err(),
         "Command should fail because we're using a mock provider"
@@ -76,14 +76,14 @@ async fn test_cli_with_remote_repository() -> Result<()> {
     };
 
     // Just testing that it doesn't panic
-    let result = gitv::cli::handle_command(review_command, None).await;
+    let result = gitpilot::cli::handle_command(review_command, None).await;
     assert!(
         result.is_err(),
         "Command should fail because we're using a mock provider"
     );
 
     // 4. Test cmsg command with repository URL
-    let gen_command = Commands::Msg {
+    let gen_command = Commands::Message {
         common,
         auto_commit: false,
         no_emoji: true,
@@ -92,7 +92,7 @@ async fn test_cli_with_remote_repository() -> Result<()> {
     };
 
     // Just testing that it doesn't panic
-    let result = gitv::cli::handle_command(gen_command, None).await;
+    let result = gitpilot::cli::handle_command(gen_command, None).await;
     assert!(
         result.is_err(),
         "Command should fail because we're using a mock provider"

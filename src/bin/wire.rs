@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use colored::Colorize;
 use gitpilot::wire::check;
 use gitpilot::wire::common;
 use gitpilot::wire::sync;
@@ -49,7 +50,7 @@ enum Command {
         dst: String,
     },
 
-    /// DIrectly checks if the code is identical to the code led by given arguments.
+    /// Directly checks if the code is identical to the code led by given arguments.
     DirectCheck {
         #[arg(long)]
         url: String,
@@ -107,8 +108,6 @@ fn main() {
         ),
     };
 
-    use colored::*;
-
     match result.as_ref() {
         Ok(true) => println!("{}", "Success".green().bold()),
         Ok(false) => println!("{}", "Failure".red().bold()),
@@ -124,5 +123,5 @@ fn main() {
 #[test]
 fn verify_cli() {
     use clap::CommandFactory;
-    Cli::command().debug_assert()
+    Cli::command().debug_assert();
 }

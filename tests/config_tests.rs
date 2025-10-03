@@ -60,7 +60,7 @@ fn test_project_config_security() {
 
     // Verify no API keys are in git config
     for provider_name in &["openai", "anthropic", "cohere"] {
-        let key = format!("gitv.{}-apikey", provider_name);
+        let key = format!("gitv.{provider_name}-apikey");
         let output = Command::new("git")
             .args(["config", "--get", &key])
             .current_dir(".")
@@ -68,8 +68,7 @@ fn test_project_config_security() {
             .expect("Failed to check git config");
         assert!(
             !output.status.success(),
-            "API key was found in git config for provider {}",
-            provider_name
+            "API key was found in git config for provider {provider_name}",
         );
     }
 

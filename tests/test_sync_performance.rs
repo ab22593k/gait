@@ -1,3 +1,6 @@
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::as_conversions)]
+
 use gitpilot::wire::RepositoryConfiguration;
 use std::time::Instant;
 
@@ -42,7 +45,9 @@ fn test_repository_deduplication_performance() {
     );
 
     // Performance improvement should be significant (at least 50% faster in this simulation)
-    let improvement = duration_no_dedup.as_millis() as f64 / duration_with_dedup.as_millis() as f64;
+    let improvement =
+        (duration_no_dedup.as_millis() as f64) / (duration_with_dedup.as_millis() as f64);
+
     println!("Performance improvement: {improvement:.2}x");
     assert!(
         improvement > 1.5,

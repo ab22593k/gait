@@ -114,7 +114,7 @@ impl Config {
         Self {
             default_provider,
             providers,
-            use_emoji: use_emoji,
+            use_emoji,
             instructions,
             instruction_preset,
             temp_instructions: None,

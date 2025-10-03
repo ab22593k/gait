@@ -27,7 +27,9 @@ fn test_concurrent_access_to_same_repository() {
 
         let handle = thread::spawn(move || {
             // Acquire the lock on the shared repository (this serializes access)
-            let repo = repo_clone.lock().unwrap();
+            let repo = repo_clone
+                .lock()
+                .expect("Failed to acquire repository lock");
 
             // Create a configuration specific to this thread
             let config = RepositoryConfiguration {
@@ -52,7 +54,10 @@ fn test_concurrent_access_to_same_repository() {
     }
 
     // Wait for all threads to complete and collect their results
-    let results: Vec<String> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+    let results: Vec<String> = handles
+        .into_iter()
+        .map(|h| h.join().expect("Thread panicked during execution"))
+        .collect();
 
     // Verify that all threads completed successfully
     assert_eq!(results.len(), NUM_THREADS);
@@ -105,7 +110,10 @@ fn test_concurrent_repository_access_simulation() {
     }
 
     // Wait for all threads to complete and collect results
-    let results: Vec<String> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+    let results: Vec<String> = handles
+        .into_iter()
+        .map(|h| h.join().expect("Thread panicked during execution"))
+        .collect();
 
     // Ensure at least one thread successfully acquired and released the lock
     assert!(results.iter().any(|r| r.contains("acquired and released")));

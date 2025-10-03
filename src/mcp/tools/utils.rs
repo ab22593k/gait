@@ -8,9 +8,9 @@ use crate::git::GitRepo;
 use rmcp::model::{Annotated, CallToolResult, Content, RawContent, RawTextContent};
 use std::sync::Arc;
 
-/// Common trait for all GitPilot MCP tools
+/// Common trait for all `GitPilot` MCP tools
 ///
-/// This trait defines the common interface that all GitPilot tools must implement.
+/// This trait defines the common interface that all `GitPilot` tools must implement.
 #[async_trait::async_trait]
 pub trait PilotTool {
     /// Execute the tool with the provided repository and configuration
