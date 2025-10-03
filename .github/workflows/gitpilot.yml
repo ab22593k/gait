@@ -1,7 +1,4 @@
-# This workflow handles continuous integration and deployment.
-# It runs tests and builds for all pushes, and creates releases for tagged pushes.
-
-name: Flow CI/CD
+name: GitPilot CI/CD
 
 on:
   push:
@@ -26,6 +23,16 @@ jobs:
             target: x86_64-unknown-linux-gnu
             cmd: cargo
 
+          - build: windows-amd64
+            os: windows-latest
+            target: x86_64-pc-windows-gnu
+            cmd: cargo
+
+          - build: macos-amd64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            cmd: cargo
+
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -44,11 +51,11 @@ jobs:
           # Let action generate cache keys automatically
           workspaces: ". -> target"
 
-      - name: 🔨 Build
-        run: |
-          echo "::group::Building Git-Iris (${{ matrix.build }})"
-          ${{ matrix.cmd }} build --verbose --locked --target ${{ matrix.target }}
-          echo "::endgroup::"
+      - name: 🔍 Run fmt check
+        run: cargo fmt --all -- --check
+
+      - name: 🔍 Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: 🧪 Run tests
         run: |
@@ -56,7 +63,25 @@ jobs:
           ${{ matrix.cmd }} test --verbose --locked --target ${{ matrix.target }}
           echo "::endgroup::"
 
-  # The following jobs only run on tag pushes (i.e., releases)
+  docs:
+    name: 📚 Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🦀 Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 📦 Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: 📚 Check documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --workspace --no-deps --document-private-items
+
+    # The following jobs only run on tag pushes (i.e., releases)
   build-artifacts:
     name: 📦 Build Artifacts (${{ matrix.build }})
     if: startsWith(github.ref, 'refs/tags/')
@@ -68,17 +93,17 @@ jobs:
           - build: linux-amd64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            binary_name: git-iris
+            binary_name: gitpilot
 
           - build: windows-gnu
             os: windows-latest
             target: x86_64-pc-windows-gnu
-            binary_name: git-iris.exe
+            binary_name: gitpilot.exe
 
-          - build: macos-arm64
+          - build: macos-amd64
             os: macos-latest
-            target: aarch64-apple-darwin
-            binary_name: git-iris
+            target: x86_64-apple-darwin
+            binary_name: gitpilot
 
     steps:
       - name: 📥 Checkout code
@@ -109,7 +134,7 @@ jobs:
       - name: 📤 Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: git-iris-${{ matrix.build }}
+          name: gitpilot-${{ matrix.build }}
           path: ./target/${{ matrix.target }}/release/${{ matrix.binary_name }}
           if-no-files-found: error
           retention-days: 1
@@ -176,8 +201,8 @@ jobs:
       - name: 📤 Upload DEB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: git-iris-deb-${{ matrix.arch_suffix }}
-          path: ./target/${{ matrix.target }}/debian/git-iris_${{ steps.get_version.outputs.VERSION }}-1_${{ matrix.arch_suffix }}.deb
+          name: gitpilot-deb-${{ matrix.arch_suffix }}
+          path: ./target/${{ matrix.target }}/debian/gitpilot_${{ steps.get_version.outputs.VERSION }}-1_${{ matrix.arch_suffix }}.deb
           if-no-files-found: error
           retention-days: 1
 
@@ -201,8 +226,8 @@ jobs:
       - name: 📤 Upload RPM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: git-iris-rpm-${{ matrix.arch_suffix }}
-          path: ./target/generate-rpm/git-iris-${{ steps.get_version.outputs.VERSION }}-1.${{ matrix.rpm_arch }}.rpm
+          name: gitpilot-rpm-${{ matrix.arch_suffix }}
+          path: ./target/generate-rpm/gitpilot-${{ steps.get_version.outputs.VERSION }}-1.${{ matrix.rpm_arch }}.rpm
           if-no-files-found: error
           retention-days: 1
 
@@ -211,8 +236,8 @@ jobs:
         if: matrix.build == 'linux-amd64'
         uses: actions/upload-artifact@v4
         with:
-          name: git-iris-man
-          path: ./git-iris.1
+          name: gitpilot-man
+          path: ./gitpilot.1
           if-no-files-found: error
           retention-days: 1
 
@@ -251,7 +276,7 @@ jobs:
   create-release:
     name: 🚀 Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [build-artifacts, build-packages, docker-publish, cargo-publish]
+    needs: [build-artifacts, build-packages, cargo-publish]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -274,22 +299,22 @@ jobs:
           ls -la ./release-assets
           echo "::endgroup::"
 
-      - name: 📝 Generate release notes with git-iris
+      - name: 📝 Generate release notes with gitpilot
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "::group::Generating release notes"
           if [ -n "$OPENAI_API_KEY" ]; then
-            # Build git-iris locally to generate release notes
+            # Build gitpilot locally to generate release notes
             cargo build --release
 
             # Get previous tag
             PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 
             if [ -n "$PREVIOUS_TAG" ]; then
-              # Generate release notes using git-iris
-              ./target/release/git-iris release-notes --from "$PREVIOUS_TAG" --to "$GITHUB_REF_NAME" --print > RELEASE_NOTES.md
-              echo "✨ Generated release notes with git-iris"
+              # Generate release notes using gitpilot
+              ./target/release/git-release-notes --from "$PREVIOUS_TAG" --to "$GITHUB_REF_NAME" --print > RELEASE_NOTES.md
+              echo "✨ Generated release notes with gitpilot"
             else
               echo "No previous tag found, using default release notes"
               echo "# Release $GITHUB_REF_NAME" > RELEASE_NOTES.md
