@@ -927,18 +927,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "gwtflow"
+name = "gitpilot"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "cause",
  "chrono",
  "clap",
  "colored",
  "console",
+ "crossbeam",
  "crossterm",
  "dirs",
  "dotenv",
+ "env_logger",
+ "folder_compare",
+ "fs_extra",
  "futures",
  "git2",
  "indicatif",
@@ -957,6 +962,7 @@ dependencies = [
  "serde_json",
  "strum 0.27.2",
  "strum_macros 0.27.2",
+ "temp-dir",
  "tempfile",
  "textwrap",
  "tiktoken-rs",
@@ -966,27 +972,6 @@ dependencies = [
  "tui-textarea",
  "unicode-width 0.2.0",
  "url",
-]
-
-[[package]]
-name = "gwtwire"
-version = "0.1.0"
-dependencies = [
- "cause",
- "clap",
- "colored",
- "crossbeam",
- "env_logger",
- "folder_compare",
- "fs_extra",
- "log",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "temp-dir",
- "tempfile",
- "tokio",
  "uuid",
 ]
 

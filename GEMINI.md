@@ -1,32 +1,41 @@
-# Ritex Project Documentation
+# GitPilot Project Documentation
 
 ## Project Overview
 
-Ritex is a Rust workspace project that appears to be a development tool ecosystem focused on AI-powered Git workflow assistance and specification-driven development. The workspace contains two main crates:
+GitPilot is a Rust project that provides a suite of AI-powered tools for enhancing Git workflows and development processes. The project includes multiple binaries for specialized tasks:
 
-1. **git-iris** - An AI-powered Git workflow assistant that enhances development processes with intelligent support for commit messages, code reviews, changelogs, and release notes
-2. **git-wire** - A git subcommand that wires parts of other repositories' source code into the current repository in a declarative manner
+1. **gitpilot** - Main AI-powered Git workflow assistant that enhances development processes
+2. **git-review** - Intelligent code reviews with quality dimensions
+3. **git-pr** - Git pull request management
+4. **git-changelog** - Dynamic changelog generation
+5. **git-release-notes** - Release notes generation
+6. **git-serve** - MCP server for AI tool integration
+7. **git-presets** - Preset management
+8. **git-wire** - A git subcommand that wires parts of other repositories' source code into the current repository in a declarative manner
 
 The project also includes a sophisticated specification and planning system (`.specify`) that provides AI-assisted feature development workflows with templates and scripts to guide the development process.
 
-## Workspace Structure
+## Project Structure
 
-- `/crates/` - Contains the two main Rust crates (`git-iris` and `git-wire`)
-- `/src/` - Main entry point (currently has a simple "Hello, world!" main.rs)
+- `/src/` - Main source code with library and multiple binaries
+- `/src/bin/` - Individual binary entry points (git-review, git-pr, git-changelog, etc.)
 - `/commands/` - TOML configuration files that define AI command workflows
 - `/.specify/` - Specification and planning system with templates and scripts
 - `/target/` - Compiled output directory (git-ignored)
 
 ## Key Features
 
-### Git-Iris (AI Git Assistant)
-- AI-powered Git commit message generation
-- Intelligent code reviews with 11 quality dimensions
-- Dynamic changelog and release notes generation
-- Multi-provider support (OpenAI, Anthropic, Google, Ollama, etc.)
-- Interactive CLI for refining commits
+### GitPilot Tools
+- **gitpilot** - Main CLI with AI-powered Git workflow assistance
+- **git-review** - Intelligent code reviews with quality dimensions
+- **git-pr** - Pull request management and analysis
+- **git-changelog** - Dynamic changelog generation from commits
+- **git-release-notes** - AI-generated release notes
+- **git-serve** - MCP server for AI tool integration
+- **git-presets** - Preset configurations for common workflows
+- Multi-provider AI support (OpenAI, Anthropic, Google, Ollama, etc.)
+- Interactive CLI for refining outputs
 - Docker support for CI/CD integration
-- MCP (Model Context Protocol) server for AI tool integration
 
 ### Git-Wire (Repository Wiring Tool)
 - Declarative cross-repository code synchronization
@@ -50,40 +59,44 @@ The project also includes a sophisticated specification and planning system (`.s
 
 ### Build Commands
 ```bash
-# Build all workspace crates
+# Build all binaries
 cargo build
 
 # Build in release mode
 cargo build --release
 
-# Build specific crate
-cargo build -p git-iris
-cargo build -p git-wire
+# Build specific binary
+cargo build --bin gitpilot
+cargo build --bin git-review
+cargo build --bin git-wire
 ```
 
 ### Running Commands
 ```bash
-# Run git-iris (if installed)
-git-iris gen                    # Generate commit message
-git-iris review                 # Code review
-git-iris changelog            # Generate changelog
-git-iris release-notes        # Generate release notes
+# Run individual tools (after building or installing)
+gitpilot                    # Main CLI tool
+git-review                  # Code review
+git-pr                      # Pull request management
+git-changelog               # Generate changelog
+git-release-notes           # Generate release notes
+git-serve                   # Start MCP server
+git-presets                 # Manage presets
+git-wire sync               # Sync external repositories
+git-wire check              # Check for differences
 
-# Run git-wire (if installed)
-git wire sync                 # Sync external repositories
-git wire check                # Check for differences
-
-# Install crates
-cargo install --path crates/git-iris
-cargo install --path crates/git-wire
+# Install binaries
+cargo install --bin gitpilot
+cargo install --bin git-review
+cargo install --bin git-wire
+# etc. for other binaries
 ```
 
 ## Development Conventions
 
 - The project follows Rust 2024 edition standards
-- Code is licensed under various open-source licenses (Apache-2.0 for git-iris, MIT for git-wire)
-- Both crates use extensive dependency management with detailed configuration
-- The git-iris crate has comprehensive clippy linting rules for code quality
+- Code is licensed under MIT license
+- Extensive dependency management with detailed configuration
+- Comprehensive clippy linting rules for code quality
 - The project uses TOML files for configuration and command definitions
 
 ## Project Commands
@@ -106,15 +119,16 @@ The `.specify/` directory contains:
 
 ## Repository Status
 
-The project is still in early development, as indicated by:
-- The main `src/main.rs` containing only a "Hello, world!" program
-- The workspace structure suggesting this may be an experimental or work-in-progress setup
-- The presence of both a specification system and multiple functional crates
+The project is actively developed, providing a suite of AI-powered Git tools with:
+- Multiple specialized binaries for different Git workflow tasks
+- Comprehensive AI integration with multiple providers
+- Specification-driven development system
+- Active CI/CD with automated testing and releases
 
-## Potential Future Direction
+## Project Direction
 
-Based on the components present, it appears Ritex might be evolving into a comprehensive AI-assisted development environment that combines:
-1. Git workflow automation (via git-iris)
+gitpilot provides a comprehensive AI-assisted development environment that combines:
+1. Git workflow automation (via multiple specialized tools)
 2. Cross-repository code management (via git-wire)
 3. Specification-driven development (via the .specify system)
 4. AI command workflows (via the commands system)
