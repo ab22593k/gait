@@ -1,6 +1,6 @@
 use super::app::TuiCommit;
 use super::spinner::SpinnerState;
-use super::state::{EmojiMode, Mode, UserInfoFocus};
+use super::state::{EmojiMode, Mode};
 use crate::commit::types::format_commit_message;
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -19,7 +19,6 @@ pub fn handle_input(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
         Mode::EditingInstructions => handle_editing_instructions(app, key),
         Mode::SelectingEmoji => handle_selecting_emoji(app, key),
         Mode::SelectingPreset => handle_selecting_preset(app, key),
-        Mode::SelectingTheme => handle_selecting_theme(app, key),
         Mode::EditingUserInfo => handle_editing_user_info(app, key),
         Mode::Help => handle_help(app, key),
         Mode::Generating => {
@@ -42,12 +41,18 @@ fn handle_normal_mode(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
             InputResult::Continue
         }
         KeyCode::Char('i') => {
-            app.state.mode = Mode::EditingInstructions;
-            app.state
-                .set_status(String::from("Editing instructions. Press Esc to finish."));
+            app.state.instructions_visible = !app.state.instructions_visible;
+            if app.state.instructions_visible {
+                app.state.mode = Mode::EditingInstructions;
+                app.state
+                    .set_status(String::from("Editing instructions. Press Esc to finish."));
+            } else {
+                app.state.mode = Mode::Normal;
+                app.state.set_status(String::from("Instructions hidden."));
+            }
             InputResult::Continue
         }
-        KeyCode::Char('g') => {
+        KeyCode::Char('j') => {
             app.state.mode = Mode::SelectingEmoji;
             app.state.set_status(String::from(
                 "Selecting emoji. Use arrow keys and Enter to select, Esc to cancel.",
@@ -68,18 +73,11 @@ fn handle_normal_mode(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
             ));
             InputResult::Continue
         }
-        KeyCode::Char('t') => {
-            app.state.mode = Mode::SelectingTheme;
-            app.state.set_status(String::from(
-                "Selecting theme. Use arrow keys and Enter to select, Esc to cancel.",
-            ));
-            InputResult::Continue
-        }
-        KeyCode::Char('r') => {
+        KeyCode::Char('R') => {
             app.handle_regenerate();
             InputResult::Continue
         }
-        KeyCode::Left => {
+        KeyCode::Left | KeyCode::Char('l') => {
             if app.state.current_index > 0 {
                 app.state.current_index -= 1;
             } else {
@@ -93,7 +91,7 @@ fn handle_normal_mode(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
             ));
             InputResult::Continue
         }
-        KeyCode::Right => {
+        KeyCode::Right | KeyCode::Char('r') => {
             if app.state.current_index < app.state.messages.len() - 1 {
                 app.state.current_index += 1;
             } else {
@@ -116,6 +114,15 @@ fn handle_normal_mode(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
             InputResult::Commit(commit_message)
         }
         KeyCode::Char('?') => {
+            app.state.nav_bar_visible = !app.state.nav_bar_visible;
+            app.state.set_status(if app.state.nav_bar_visible {
+                String::from("Navigation bar shown.")
+            } else {
+                String::from("Navigation bar hidden.")
+            });
+            InputResult::Continue
+        }
+        KeyCode::Char('h') => {
             app.state.mode = Mode::Help;
             app.state
                 .set_status(String::from("Viewing help. Press any key to close."));
@@ -172,7 +179,9 @@ fn handle_editing_instructions(app: &mut TuiCommit, key: KeyEvent) -> InputResul
         app.state.mode = Mode::Normal;
         app.state.custom_instructions = app.state.instructions_textarea.lines().join("\n");
         app.state.set_status(String::from("Instructions updated."));
-        app.handle_regenerate();
+        if !app.state.custom_instructions.trim().is_empty() {
+            app.handle_regenerate();
+        }
         InputResult::Continue
     } else {
         app.state.instructions_textarea.input(key);
@@ -308,60 +317,7 @@ fn handle_editing_user_info(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
             app.state.set_status(String::from("User info updated."));
             InputResult::Continue
         }
-        KeyCode::Tab => {
-            app.state.user_info_focus = match app.state.user_info_focus {
-                UserInfoFocus::Name => UserInfoFocus::Email,
-                UserInfoFocus::Email => UserInfoFocus::Name,
-            };
-            InputResult::Continue
-        }
-        _ => {
-            let input_handled = match app.state.user_info_focus {
-                UserInfoFocus::Name => app.state.user_name_textarea.input(key),
-                UserInfoFocus::Email => app.state.user_email_textarea.input(key),
-            };
-            if !input_handled {
-                app.state
-                    .set_status(String::from("Unhandled input in user info editing"));
-            }
-            InputResult::Continue
-        }
-    }
-}
 
-fn handle_selecting_theme(app: &mut TuiCommit, key: KeyEvent) -> InputResult {
-    match key.code {
-        KeyCode::Esc => {
-            app.state.mode = Mode::Normal;
-            app.state
-                .set_status(String::from("Theme selection cancelled."));
-            InputResult::Continue
-        }
-        KeyCode::Enter => {
-            if let Some(selected) = app.state.theme_list_state.selected() {
-                app.state.theme = app.state.theme_list[selected].clone();
-                app.state.mode = Mode::Normal;
-                app.state
-                    .set_status(format!("Theme changed to: {}", app.state.theme.name));
-            }
-            InputResult::Continue
-        }
-        KeyCode::Up => {
-            let selected = app.state.theme_list_state.selected().unwrap_or(0);
-            let new_selected = if selected > 0 {
-                selected - 1
-            } else {
-                app.state.theme_list.len() - 1
-            };
-            app.state.theme_list_state.select(Some(new_selected));
-            InputResult::Continue
-        }
-        KeyCode::Down => {
-            let selected = app.state.theme_list_state.selected().unwrap_or(0);
-            let new_selected = (selected + 1) % app.state.theme_list.len();
-            app.state.theme_list_state.select(Some(new_selected));
-            InputResult::Continue
-        }
         _ => InputResult::Continue,
     }
 }

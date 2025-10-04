@@ -5,9 +5,9 @@ use gitpilot::common::CommonParams;
 use gitpilot::logger;
 
 #[derive(Parser)]
-#[command(name = "git-flow-msg", about = "Generate a commit message using AI")]
+#[command(name = "git-message", about = "Generate a commit message using AI")]
 #[allow(clippy::struct_excessive_bools)]
-struct MsgArgs {
+struct MessageArgs {
     #[command(flatten)]
     common: CommonParams,
 
@@ -26,13 +26,20 @@ struct MsgArgs {
     /// Skip the verification step (pre/post commit hooks)
     #[arg(long, help = "Skip verification steps (pre/post commit hooks)")]
     no_verify: bool,
+
+    /// Dry run mode: do not make real HTTP requests, for UI testing
+    #[arg(
+        long,
+        help = "Dry run mode: do not make real HTTP requests, for UI testing"
+    )]
+    dry_run: bool,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     logger::init().expect("Failed to initialize logger");
 
-    let args = MsgArgs::parse();
+    let args = MessageArgs::parse();
 
     let repository_url = args.common.repository_url.clone();
 
@@ -43,6 +50,7 @@ async fn main() -> Result<()> {
             use_emoji: !args.no_emoji,
             print_only: args.print,
             verify: !args.no_verify,
+            dry_run: args.dry_run,
         },
         repository_url,
     )

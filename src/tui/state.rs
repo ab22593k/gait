@@ -1,12 +1,10 @@
 use crate::commit::types::{GeneratedMessage, format_commit_message};
 use crate::emoji::get_emoji_list;
 use crate::instruction_presets::{get_instruction_preset_library, list_presets_formatted};
-use crate::messages::get_user_message;
 use ratatui::widgets::ListState;
 use tui_textarea::TextArea;
 
 use super::spinner::SpinnerState;
-use super::theme::Theme;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Mode {
@@ -16,15 +14,8 @@ pub enum Mode {
     EditingUserInfo,
     SelectingEmoji,
     SelectingPreset,
-    SelectingTheme,
     Generating,
     Help,
-}
-
-#[derive(PartialEq, Eq)]
-pub enum UserInfoFocus {
-    Name,
-    Email,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -48,18 +39,16 @@ pub struct TuiState {
     pub emoji_list_state: ListState,
     pub preset_list: Vec<(String, String, String, String)>,
     pub preset_list_state: ListState,
-    pub theme_list: Vec<Theme>,
-    pub theme_list_state: ListState,
     pub user_name: String,
     pub user_email: String,
     pub user_name_textarea: TextArea<'static>,
     pub user_email_textarea: TextArea<'static>,
-    pub user_info_focus: UserInfoFocus,
     pub spinner: Option<SpinnerState>,
     pub dirty: bool, // Used to track if we need to redraw
     pub last_spinner_update: std::time::Instant,
     pub emoji_mode: EmojiMode,
-    pub theme: Theme,
+    pub instructions_visible: bool,
+    pub nav_bar_visible: bool,
 }
 
 impl TuiState {
@@ -119,10 +108,6 @@ impl TuiState {
         let mut preset_list_state = ListState::default();
         preset_list_state.select(Some(0));
 
-        let theme_list = Theme::all_themes();
-        let mut theme_list_state = ListState::default();
-        theme_list_state.select(Some(0));
-
         let mut user_name_textarea = TextArea::default();
         user_name_textarea.insert_str(&user_name);
         let mut user_email_textarea = TextArea::default();
@@ -132,7 +117,7 @@ impl TuiState {
             messages,
             current_index: 0,
             custom_instructions,
-            status: format!("{}.. Press 'Esc' to exit.", get_user_message().text),
+            status: "Press '?': help | 'Esc': exit".to_string(),
             selected_emoji: None,
             selected_preset: preset,
             mode: Mode::Normal,
@@ -147,17 +132,15 @@ impl TuiState {
             },
             preset_list,
             preset_list_state,
-            theme_list,
-            theme_list_state,
             user_name,
             user_email,
             user_name_textarea,
             user_email_textarea,
-            user_info_focus: UserInfoFocus::Name,
             spinner: None,
             dirty: true,
             last_spinner_update: std::time::Instant::now(),
-            theme: Theme::default(),
+            instructions_visible: false,
+            nav_bar_visible: false,
         }
     }
 

@@ -346,6 +346,7 @@ pub struct CmsgConfig {
     pub use_emoji: bool,
     pub print_only: bool,
     pub verify: bool,
+    pub dry_run: bool,
 }
 
 pub async fn handle_message(
@@ -371,6 +372,7 @@ pub async fn handle_message(
         config.use_emoji,
         config.print_only,
         config.verify,
+        config.dry_run,
         repository_url,
     )
     .await
@@ -487,6 +489,7 @@ pub async fn handle_command(
                     use_emoji: !no_emoji,
                     print_only: print,
                     verify: !no_verify,
+                    dry_run: false,
                 },
                 repository_url,
             )

@@ -262,71 +262,6 @@ static REVIEW_WAITING_MESSAGES: LazyLock<Vec<ColoredMessage>> = LazyLock::new(||
     ]
 });
 
-static USER_MESSAGES: LazyLock<Vec<ColoredMessage>> = LazyLock::new(|| {
-    vec![
-        ColoredMessage {
-            text: "🚀 Launching commit rocket".to_string(),
-            color: METEOR_RED,
-        },
-        ColoredMessage {
-            text: "🌟 Illuminating code cosmos".to_string(),
-            color: STARLIGHT,
-        },
-        ColoredMessage {
-            text: "🔭 Observing code constellations".to_string(),
-            color: CELESTIAL_BLUE,
-        },
-        ColoredMessage {
-            text: "🧙‍♂️ Weaving code enchantments".to_string(),
-            color: GALAXY_PINK,
-        },
-        ColoredMessage {
-            text: "⚛️ Splitting code atoms".to_string(),
-            color: PLASMA_CYAN,
-        },
-        ColoredMessage {
-            text: "🌈 Painting commit rainbows".to_string(),
-            color: AURORA_GREEN,
-        },
-        ColoredMessage {
-            text: "🔑 Unlocking git portals".to_string(),
-            color: SOLAR_YELLOW,
-        },
-        ColoredMessage {
-            text: "🎭 Staging code drama".to_string(),
-            color: COMET_ORANGE,
-        },
-        ColoredMessage {
-            text: "🌌 Expanding code universe".to_string(),
-            color: NEBULA_PURPLE,
-        },
-        ColoredMessage {
-            text: "🏹 Aiming commit arrows".to_string(),
-            color: METEOR_RED,
-        },
-        ColoredMessage {
-            text: "🎨 Brushing commit strokes".to_string(),
-            color: PLASMA_CYAN,
-        },
-        ColoredMessage {
-            text: "🌱 Growing code forests".to_string(),
-            color: AURORA_GREEN,
-        },
-        ColoredMessage {
-            text: "🧩 Assembling code puzzle".to_string(),
-            color: GALAXY_PINK,
-        },
-        ColoredMessage {
-            text: "🎶 Orchestrating commit symphony".to_string(),
-            color: CELESTIAL_BLUE,
-        },
-        ColoredMessage {
-            text: "⚖️ Balancing code forces".to_string(),
-            color: SOLAR_YELLOW,
-        },
-    ]
-});
-
 pub fn get_waiting_message() -> ColoredMessage {
     let mut rng = rand::rng();
     WAITING_MESSAGES
@@ -346,16 +281,5 @@ pub fn get_review_waiting_message() -> ColoredMessage {
         .unwrap_or_else(|| ColoredMessage {
             text: "Analyzing your code quality...".to_string(),
             color: NEBULA_PURPLE,
-        })
-}
-
-pub fn get_user_message() -> ColoredMessage {
-    let mut rng = rand::rng();
-    USER_MESSAGES
-        .choose(&mut rng)
-        .cloned()
-        .unwrap_or_else(|| ColoredMessage {
-            text: "What would you like to do?".to_string(),
-            color: CELESTIAL_BLUE,
         })
 }

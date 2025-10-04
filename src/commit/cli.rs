@@ -19,6 +19,7 @@ pub async fn handle_message_command(
     use_emoji: bool,
     print: bool,
     verify: bool,
+    dry_run: bool,
     repository_url: Option<String>,
 ) -> Result<()> {
     // Check if the preset is appropriate for commit messages
@@ -76,9 +77,17 @@ pub async fn handle_message_command(
     spinner.set_message(random_message.text);
 
     // Generate an initial message
-    let initial_message = service
-        .generate_message(preset_str, &effective_instructions)
-        .await?;
+    let initial_message = if dry_run {
+        crate::commit::types::GeneratedMessage {
+            emoji: Some("🔧".to_string()),
+            title: "Fix bug in UI rendering".to_string(),
+            message: "Updated the layout to properly handle dynamic constraints and improve user experience.".to_string(),
+        }
+    } else {
+        service
+            .generate_message(preset_str, &effective_instructions)
+            .await?
+    };
 
     // Stop the spinner
     spinner.finish_and_clear();
