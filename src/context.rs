@@ -100,7 +100,10 @@ impl CommitContext {
         }
     }
     pub fn optimize(&mut self, max_tokens: usize) {
-        let optimizer = TokenOptimizer::new(max_tokens);
-        optimizer.optimize_context(self);
+        let optimizer = TokenOptimizer::new(max_tokens).expect(
+            "Failed to initialize token optimizer. Ensure the tokenizer data is available.",
+        );
+
+        let _ = optimizer.optimize_context(self);
     }
 }

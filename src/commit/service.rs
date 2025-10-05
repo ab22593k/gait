@@ -171,7 +171,7 @@ impl CommitService {
             });
 
         // Create a token optimizer to count tokens
-        let optimizer = TokenOptimizer::new(token_limit);
+        let optimizer = TokenOptimizer::new(token_limit).expect("Failed to create TokenOptimizer");
         let system_tokens = optimizer.count_tokens(system_prompt);
 
         debug!("Token limit: {}", token_limit);
@@ -205,7 +205,9 @@ impl CommitService {
                 total_tokens, token_limit
             );
             let max_user_tokens = token_limit.saturating_sub(system_tokens + 100);
-            optimizer.truncate_string(&user_prompt, max_user_tokens)
+            optimizer
+                .truncate_string(&user_prompt, max_user_tokens)
+                .expect("Failed to truncate user prompt")
         } else {
             user_prompt
         };

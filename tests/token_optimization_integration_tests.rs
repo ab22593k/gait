@@ -16,7 +16,8 @@ async fn test_token_optimization_integration() {
 
     // Set a small token limit for the OpenAI provider to force truncation
     let small_token_limit = 200;
-    let optimizer = TokenOptimizer::new(small_token_limit);
+    let optimizer = TokenOptimizer::new(small_token_limit)
+        .expect("Failed to initialize token optimizer. Ensure the tokenizer data is available.");
 
     let context = git_repo
         .get_git_info(&config)
@@ -28,7 +29,9 @@ async fn test_token_optimization_integration() {
     let prompt = format!("{system_prompt}\n{user_prompt}");
 
     // Check that the prompt is within the token limit
-    let prompt = optimizer.truncate_string(&prompt, small_token_limit);
+    let prompt = optimizer
+        .truncate_string(&prompt, small_token_limit)
+        .expect("Failed to truncate prompt");
 
     let token_count = optimizer.count_tokens(&prompt);
 
@@ -77,7 +80,8 @@ async fn test_token_optimization_integration() {
     let user_prompt = create_user_prompt(&context);
     let large_prompt = format!("{system_prompt}\n{user_prompt}");
 
-    let large_optimizer = TokenOptimizer::new(large_token_limit);
+    let large_optimizer = TokenOptimizer::new(large_token_limit)
+        .expect("Failed to initialize token optimizer. Ensure the tokenizer data is available.");
     let large_token_count = large_optimizer.count_tokens(&large_prompt);
 
     assert!(

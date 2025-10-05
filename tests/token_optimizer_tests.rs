@@ -50,13 +50,13 @@ fn create_test_context() -> CommitContext {
 fn test_token_optimizer_prioritize_diffs_and_commits() {
     let mut context = create_test_context();
 
-    let optimizer = TokenOptimizer::new(15); // Small token limit
+    let optimizer = TokenOptimizer::new(15).expect("Failed to initialize token optimizer");
     println!(
         "Original token count: {}",
         count_total_tokens(&context, &optimizer)
     );
 
-    optimizer.optimize_context(&mut context);
+    let _ = optimizer.optimize_context(&mut context);
 
     print_debug_info(&context, &optimizer);
 
@@ -107,9 +107,9 @@ fn test_token_optimizer_prioritize_diffs_and_commits() {
 #[test]
 fn test_token_optimizer_large_limit_with_full_content() {
     let mut context = create_test_context();
-    let optimizer = TokenOptimizer::new(1000); // Large token limit
+    let optimizer = TokenOptimizer::new(1000).expect("Failed to initialize token optimizer");
 
-    optimizer.optimize_context(&mut context);
+    let _ = optimizer.optimize_context(&mut context);
 
     let total_tokens = count_total_tokens(&context, &optimizer);
     assert!(
@@ -166,7 +166,7 @@ fn print_debug_info(context: &CommitContext, optimizer: &TokenOptimizer) {
 #[test]
 fn test_token_optimizer_realistic_limit() {
     let mut context = create_test_context_with_large_data(); // Function that creates the test data
-    let optimizer = TokenOptimizer::new(2000); // Realistic token limit
+    let optimizer = TokenOptimizer::new(2000).expect("Failed to initialize token optimizer");
 
     println!(
         "Test token count: {}",
@@ -174,7 +174,7 @@ fn test_token_optimizer_realistic_limit() {
     );
 
     // Apply the optimizer to bring the token count within the limit
-    optimizer.optimize_context(&mut context);
+    let _ = optimizer.optimize_context(&mut context);
 
     // Debugging print to verify the final token count
     let total_tokens = count_total_tokens(&context, &optimizer);
