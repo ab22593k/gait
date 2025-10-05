@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::wire::common::Method;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepositoryConfiguration {
     /// The URL of the remote repository
@@ -12,6 +14,8 @@ pub struct RepositoryConfiguration {
     pub filters: Vec<String>,
     /// Specific commit to check out (optional)
     pub commit_hash: Option<String>,
+    /// Method for cloning
+    pub mtd: Option<Method>,
 }
 
 impl RepositoryConfiguration {
@@ -21,6 +25,7 @@ impl RepositoryConfiguration {
         target_path: String,
         filters: Vec<String>,
         commit_hash: Option<String>,
+        mtd: Option<Method>,
     ) -> Self {
         Self {
             url,
@@ -28,6 +33,7 @@ impl RepositoryConfiguration {
             target_path,
             filters,
             commit_hash,
+            mtd,
         }
     }
 }

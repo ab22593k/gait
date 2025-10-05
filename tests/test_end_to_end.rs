@@ -16,12 +16,14 @@ fn test_end_to_end_caching_scenario() {
             "./src/module1".to_string(),
             vec!["src/".to_string(), "lib/".to_string()],
             None,
+            None,
         ),
         RepositoryConfiguration::new(
             "https://github.com/example/repo.git".to_string(), // Same repo
             "main".to_string(),
             "./src/module2".to_string(),
             vec!["utils/".to_string()],
+            None,
             None,
         ),
     ];
@@ -83,6 +85,7 @@ fn test_cache_performance_improvement_simulation() {
             "main".to_string(),
             format!("./src/module{i}"),
             vec![format!("src{i}")],
+            None,
             None,
         ));
     }

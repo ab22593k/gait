@@ -36,6 +36,7 @@ fn get_repo_configs(
                         parsed.dst,
                         vec![parsed.src],
                         None,
+                        parsed.mtd,
                     )
                 })
                 .collect();
@@ -52,6 +53,7 @@ fn get_repo_configs(
                 parsed.dst.clone(),
                 vec![parsed.src.clone()],
                 None,
+                parsed.mtd.clone(),
             )];
             Ok((root, repo_configs))
         }

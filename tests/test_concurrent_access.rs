@@ -38,6 +38,7 @@ fn test_concurrent_access_to_same_repository() {
                 target_path: format!("./src/module{thread_id}"),
                 filters: vec![format!("src{thread_id}")],
                 commit_hash: None,
+                mtd: None,
             };
 
             // Create a wire operation (unused but simulates the operation creation)

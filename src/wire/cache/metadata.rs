@@ -207,6 +207,7 @@ mod tests {
             "./src/module1".to_string(),
             vec!["src/".to_string()],
             None,
+            None,
         );
 
         let temp_dir = TempDir::new().expect("Failed to create temporary directory for test");
@@ -241,6 +242,7 @@ mod tests {
             "main".to_string(),
             "./src/module1".to_string(),
             vec!["src/".to_string()],
+            None,
             None,
         );
 

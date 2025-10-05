@@ -123,6 +123,7 @@ mod tests {
             "./src/module1".to_string(),
             vec!["src/".to_string()],
             None,
+            None,
         );
 
         let result = cache_manager.get_or_schedule_fetch(&config);
@@ -149,6 +150,7 @@ mod tests {
                 "./src/module1".to_string(),
                 vec!["src/".to_string(), "lib/".to_string()],
                 None,
+                None,
             ),
             RepositoryConfiguration::new(
                 "https://github.com/example/repo.git".to_string(), // Same repo and branch
@@ -156,12 +158,14 @@ mod tests {
                 "./src/module2".to_string(),
                 vec!["utils/".to_string()],
                 None,
+                None,
             ),
             RepositoryConfiguration::new(
                 "https://github.com/other/repo.git".to_string(), // Different repo
                 "main".to_string(),
                 "./src/module3".to_string(),
                 vec!["docs/".to_string()],
+                None,
                 None,
             ),
         ];

@@ -20,6 +20,7 @@ fn test_repository_deduplication_performance() {
             target_path: format!("./src/module{i}"),
             filters: vec![format!("src{i}")],
             commit_hash: None,
+            mtd: None,
         });
     }
 

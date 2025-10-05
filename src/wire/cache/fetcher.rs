@@ -1,7 +1,8 @@
 use cause::{Cause, cause};
 use git2::Repository;
+use std::process::Command;
 
-use super::super::common::ErrorType;
+use super::super::common::{ErrorType, Method};
 use crate::wire::models::repo_config::RepositoryConfiguration;
 
 pub struct RepositoryFetcher;
@@ -22,40 +23,55 @@ impl RepositoryFetcher {
 
         println!("Fetching repository: {} to cache", config.url);
 
-        Self::execute_git_clone(&config.url, cache_path)?;
-        Self::execute_git_checkout(cache_path, &config.branch)?;
+        Self::execute_git_clone(config, cache_path)?;
+        if !matches!(config.mtd, Some(Method::ShallowNoSparse)) {
+            Self::execute_git_checkout(cache_path, &config.branch)?;
+        }
 
         println!("Repository fetched and cached at: {cache_path}");
         Ok(())
     }
 
     /// Execute the git clone command with error handling
-    fn execute_git_clone(url: &str, cache_path: &str) -> Result<(), Cause<ErrorType>> {
-        Repository::clone(url, cache_path)
-            .map_err(|e| cause!(ErrorType::GitCloneCommand).src(e))?;
+    fn execute_git_clone(config: &RepositoryConfiguration, cache_path: &str) -> Result<(), Cause<ErrorType>> {
+        // Remove the cache directory if it exists
+        if std::path::Path::new(cache_path).exists() {
+            std::fs::remove_dir_all(cache_path)
+                .map_err(|e| cause!(ErrorType::GitCloneCommand).src(e))?;
+        }
+
+        if matches!(config.mtd, Some(Method::ShallowNoSparse)) {
+            // Use git command for shallow clone with branch
+            let output = Command::new("git")
+                .args(&["clone", "--depth", "1", "--branch", &config.branch, &config.url, cache_path])
+                .output()
+                .map_err(|e| cause!(ErrorType::GitCloneCommand).src(e))?;
+            if !output.status.success() {
+                return Err(cause!(ErrorType::GitCloneCommand).msg(String::from_utf8_lossy(&output.stderr)));
+            }
+        } else {
+            Repository::clone(&config.url, cache_path)
+                .map_err(|e| cause!(ErrorType::GitCloneCommand).src(e))?;
+        }
 
         Ok(())
     }
 
     /// Execute the git checkout command with error handling
-    fn execute_git_checkout(cache_path: &str, branch: &str) -> Result<(), Cause<ErrorType>> {
+    fn execute_git_checkout(cache_path: &str, rev: &str) -> Result<(), Cause<ErrorType>> {
         let repo = Repository::open(cache_path)
             .map_err(|e| cause!(ErrorType::GitCheckoutCommand).src(e))?;
 
-        let branch_ref = repo
-            .find_branch(branch, git2::BranchType::Local)
-            .or_else(|_| repo.find_branch(branch, git2::BranchType::Remote))
-            .map_err(|e| cause!(ErrorType::GitCheckoutCommand).src(e))?;
-
-        let obj = branch_ref
-            .get()
+        let obj = repo
+            .revparse_single(rev)
+            .map_err(|e| cause!(ErrorType::GitCheckoutCommand).src(e))?
             .peel(git2::ObjectType::Commit)
             .map_err(|e| cause!(ErrorType::GitCheckoutCommand).src(e))?;
 
         repo.checkout_tree(&obj, None)
             .map_err(|e| cause!(ErrorType::GitCheckoutCommand).src(e))?;
 
-        repo.set_head(&format!("refs/heads/{branch}"))
+        repo.set_head_detached(obj.id())
             .map_err(|e| cause!(ErrorType::GitCheckoutCommand).src(e))?;
 
         Ok(())
@@ -63,8 +79,7 @@ impl RepositoryFetcher {
 
     /// Check if the cached repository is still valid (up-to-date)
     fn is_cache_valid(_config: &RepositoryConfiguration, cache_path: &str) -> bool {
-        // For now, just check if the directory exists
-        // In a real implementation, we would check if the remote has updates
+        // Check if the directory exists
         std::path::Path::new(cache_path).exists()
     }
 }
@@ -87,6 +102,7 @@ mod tests {
             "main".to_string(),
             "./src/module1".to_string(),
             vec!["src/".to_string()],
+            None,
             None,
         );
 

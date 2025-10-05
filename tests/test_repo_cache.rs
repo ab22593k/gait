@@ -11,6 +11,7 @@ fn test_repository_deduplication_logic() {
             target_path: "./src/module1".to_string(),
             filters: vec!["src/".to_string(), "lib/".to_string()],
             commit_hash: None,
+            mtd: None,
         },
         RepositoryConfiguration {
             url: "https://github.com/example/repo.git".to_string(), // Same repo
@@ -18,6 +19,7 @@ fn test_repository_deduplication_logic() {
             target_path: "./src/module2".to_string(),
             filters: vec!["utils/".to_string()],
             commit_hash: None,
+            mtd: None,
         },
         RepositoryConfiguration {
             url: "https://github.com/other/repo.git".to_string(), // Different repo
@@ -25,6 +27,7 @@ fn test_repository_deduplication_logic() {
             target_path: "./src/module3".to_string(),
             filters: vec!["docs/".to_string()],
             commit_hash: None,
+            mtd: None,
         },
     ];
 
@@ -77,6 +80,7 @@ fn test_cached_repository_usage() {
         target_path: "./src/module1".to_string(),
         filters: vec!["src/".to_string()],
         commit_hash: None,
+        mtd: None,
     };
 
     let config2 = RepositoryConfiguration {
@@ -85,6 +89,7 @@ fn test_cached_repository_usage() {
         target_path: "./src/module2".to_string(),
         filters: vec!["utils/".to_string()],
         commit_hash: None,
+        mtd: None,
     };
 
     let op1 = WireOperation::new(config1, cached_repo.local_cache_path.clone());

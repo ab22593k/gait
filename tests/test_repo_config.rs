@@ -8,6 +8,7 @@ fn test_repository_configuration_creation() {
         target_path: "./src/module1".to_string(),
         filters: vec!["src/".to_string(), "lib/".to_string()],
         commit_hash: None,
+        mtd: None,
     };
 
     assert_eq!(config.url, "https://github.com/example/repo.git");
@@ -25,6 +26,7 @@ fn test_repository_configuration_with_commit_hash() {
         target_path: "./src/module2".to_string(),
         filters: vec!["utils/".to_string()],
         commit_hash: Some("abc123def456".to_string()),
+        mtd: None,
     };
 
     assert_eq!(config.commit_hash, Some("abc123def456".to_string()));
@@ -38,6 +40,7 @@ fn test_repository_configuration_default_branch() {
         target_path: "./src/module1".to_string(),
         filters: vec![],
         commit_hash: None,
+        mtd: None,
     };
 
     assert_eq!(config.branch, "main");
