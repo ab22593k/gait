@@ -5,8 +5,8 @@
 use crate::commit::service::CommitService;
 use crate::commit::types::format_commit_message;
 use crate::config::Config as PilotConfig;
-use crate::git::GitRepo;
 use crate::debug;
+use crate::git::GitRepo;
 use crate::mcp::tools::utils::{
     PilotTool, create_text_result, resolve_git_repo, validate_repository_parameter,
 };
@@ -50,7 +50,7 @@ impl CommitTool {
     /// Returns the tool definition for the commit tool
     pub fn get_tool_definition() -> Tool {
         Tool {
-            name: Cow::Borrowed("gitpilot_commit"),
+            name: Cow::Borrowed("gitai_commit"),
             description: Cow::Borrowed("Generate commit messages and perform Git commits"),
             input_schema: cached_schema_for_type::<Self>(),
         }

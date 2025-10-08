@@ -1,4 +1,4 @@
-use gitpilot::{
+use gitai::{
     context::{ChangeType, StagedFile},
     file_analyzers::{get_analyzer, should_exclude_file},
 };
@@ -510,7 +510,7 @@ fn test_toml_analyzer() {
     // Test metadata extraction
     let content = r#"
 [package]
-name = "gitpilot"
+name = "gitai"
 version = "0.2.0"
 authors = ["Author <author@example.com>"]
 

@@ -1,4 +1,4 @@
-use gitpilot::context::ChangeType;
+use gitai::context::ChangeType;
 use std::fs;
 use std::path::Path;
 

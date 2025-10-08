@@ -3,7 +3,7 @@
 //! This module provides the MCP tool for generating changelogs.
 
 use crate::changes::ChangelogGenerator;
-use crate::config::Config as GitPilotConfig;
+use crate::config::Config as GitAIConfig;
 use crate::debug;
 use crate::git::GitRepo;
 use crate::mcp::tools::utils::{
@@ -49,7 +49,7 @@ impl ChangelogTool {
     /// Returns the tool definition for the changelog tool
     pub fn get_tool_definition() -> Tool {
         Tool {
-            name: Cow::Borrowed("gitpilot_changelog"),
+            name: Cow::Borrowed("gitai_changelog"),
             description: Cow::Borrowed("Generate a detailed changelog between two Git references"),
             input_schema: cached_schema_for_type::<Self>(),
         }
@@ -62,7 +62,7 @@ impl PilotTool for ChangelogTool {
     async fn execute(
         &self,
         git_repo: Arc<GitRepo>,
-        config: GitPilotConfig,
+        config: GitAIConfig,
     ) -> Result<CallToolResult, anyhow::Error> {
         debug!("Generating changelog with: {:?}", self);
 

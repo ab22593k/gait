@@ -1,4 +1,4 @@
-name: GitPilot CI/CD
+name: GitAI CI/CD
 
 on:
   push:
@@ -93,17 +93,17 @@ jobs:
           - build: linux-amd64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            binary_name: gitpilot
+            binary_name: gitai
 
           - build: windows-gnu
             os: windows-latest
             target: x86_64-pc-windows-gnu
-            binary_name: gitpilot.exe
+            binary_name: gitai.exe
 
           - build: macos-amd64
             os: macos-latest
             target: x86_64-apple-darwin
-            binary_name: gitpilot
+            binary_name: gitai
 
     steps:
       - name: 📥 Checkout code
@@ -134,7 +134,7 @@ jobs:
       - name: 📤 Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gitpilot-${{ matrix.build }}
+          name: gitai-${{ matrix.build }}
           path: ./target/${{ matrix.target }}/release/${{ matrix.binary_name }}
           if-no-files-found: error
           retention-days: 1
@@ -201,8 +201,8 @@ jobs:
       - name: 📤 Upload DEB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gitpilot-deb-${{ matrix.arch_suffix }}
-          path: ./target/${{ matrix.target }}/debian/gitpilot_${{ steps.get_version.outputs.VERSION }}-1_${{ matrix.arch_suffix }}.deb
+          name: gitai-deb-${{ matrix.arch_suffix }}
+          path: ./target/${{ matrix.target }}/debian/gitai_${{ steps.get_version.outputs.VERSION }}-1_${{ matrix.arch_suffix }}.deb
           if-no-files-found: error
           retention-days: 1
 
@@ -226,8 +226,8 @@ jobs:
       - name: 📤 Upload RPM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gitpilot-rpm-${{ matrix.arch_suffix }}
-          path: ./target/generate-rpm/gitpilot-${{ steps.get_version.outputs.VERSION }}-1.${{ matrix.rpm_arch }}.rpm
+          name: gitai-rpm-${{ matrix.arch_suffix }}
+          path: ./target/generate-rpm/gitai-${{ steps.get_version.outputs.VERSION }}-1.${{ matrix.rpm_arch }}.rpm
           if-no-files-found: error
           retention-days: 1
 
@@ -236,8 +236,8 @@ jobs:
         if: matrix.build == 'linux-amd64'
         uses: actions/upload-artifact@v4
         with:
-          name: gitpilot-man
-          path: ./gitpilot.1
+          name: gitai-man
+          path: ./gitai.1
           if-no-files-found: error
           retention-days: 1
 
@@ -299,22 +299,22 @@ jobs:
           ls -la ./release-assets
           echo "::endgroup::"
 
-      - name: 📝 Generate release notes with gitpilot
+      - name: 📝 Generate release notes with gitai
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           echo "::group::Generating release notes"
           if [ -n "$OPENAI_API_KEY" ]; then
-            # Build gitpilot locally to generate release notes
+            # Build gitai locally to generate release notes
             cargo build --release
 
             # Get previous tag
             PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 
             if [ -n "$PREVIOUS_TAG" ]; then
-              # Generate release notes using gitpilot
+              # Generate release notes using gitai
               ./target/release/git-release-notes --from "$PREVIOUS_TAG" --to "$GITHUB_REF_NAME" --print > RELEASE_NOTES.md
-              echo "✨ Generated release notes with gitpilot"
+              echo "✨ Generated release notes with gitai"
             else
               echo "No previous tag found, using default release notes"
               echo "# Release $GITHUB_REF_NAME" > RELEASE_NOTES.md

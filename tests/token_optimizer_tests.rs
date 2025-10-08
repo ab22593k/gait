@@ -1,4 +1,4 @@
-use gitpilot::{
+use gitai::{
     context::{ChangeType, CommitContext, ProjectMetadata, RecentCommit, StagedFile},
     token_optimizer::TokenOptimizer,
 };

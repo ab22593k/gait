@@ -62,7 +62,7 @@ fn default_instruction_preset() -> String {
 impl Config {
     /// Load the configuration from git config
     pub fn load() -> Result<Self> {
-        let mut config = Self::load_from_config("gitpilot");
+        let mut config = Self::load_from_config("gitai");
 
         // Then try to load and merge project config if available
         if let Ok(project_config) = Self::load_project_config() {
@@ -145,7 +145,7 @@ impl Config {
 
     /// Load project-specific configuration
     pub fn load_project_config() -> Result<Self, anyhow::Error> {
-        let mut project_config = Self::load_from_config("gitpilot");
+        let mut project_config = Self::load_from_config("gitai");
         project_config.is_project_config = true;
         Ok(project_config)
     }
@@ -200,7 +200,7 @@ impl Config {
         }
 
         let mut config = GitConfig::open_default()?;
-        self.save_to_config(&mut config, "gitpilot")?;
+        self.save_to_config(&mut config, "gitai")?;
         debug!("Configuration saved to global git config: {self:?}");
         Ok(())
     }
@@ -269,7 +269,7 @@ impl Config {
 
         // Save to local git config
         let mut config = repo.config()?;
-        project_config.save_to_config(&mut config, "gitpilot")?;
+        project_config.save_to_config(&mut config, "gitai")?;
         debug!("Project configuration saved to local git config: {project_config:?}");
         Ok(())
     }

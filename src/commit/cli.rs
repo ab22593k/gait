@@ -27,7 +27,7 @@ pub async fn handle_message_command(
         ui::print_warning(
             "The specified preset may not be suitable for commit messages. Consider using a commit or general preset instead.",
         );
-        ui::print_info("Run 'gitpilot presets' to see available presets for commits.");
+        ui::print_info("Run 'git presets' to see available presets for commits.");
     }
 
     let mut config = Config::load()?;
@@ -159,7 +159,7 @@ pub async fn handle_pr_command(
         ui::print_warning(
             "The specified preset may not be suitable for PR descriptions. Consider using a review or general preset instead.",
         );
-        ui::print_info("Run 'gitpilot presets' to see available presets for PRs.");
+        ui::print_info("Run 'git presets' to see available presets for PRs.");
     }
 
     // Validate parameter combinations
@@ -237,7 +237,7 @@ async fn generate_pr_based_on_parameters(
                 &effective_instructions,
                 from_ref,
                 to_ref,
-                &random_message,
+                random_message,
             )
             .await?
         }
@@ -247,7 +247,7 @@ async fn generate_pr_based_on_parameters(
                 preset_str,
                 &effective_instructions,
                 to_ref,
-                &random_message,
+                random_message,
             )
             .await?
         }
@@ -257,18 +257,13 @@ async fn generate_pr_based_on_parameters(
                 preset_str,
                 &effective_instructions,
                 from_ref,
-                &random_message,
+                random_message,
             )
             .await?
         }
         (None, None) => {
-            handle_no_parameters(
-                service,
-                preset_str,
-                &effective_instructions,
-                &random_message,
-            )
-            .await?
+            handle_no_parameters(service, preset_str, &effective_instructions, random_message)
+                .await?
         }
     };
 

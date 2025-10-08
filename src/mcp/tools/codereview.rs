@@ -5,8 +5,8 @@
 
 use crate::commit::service::CommitService;
 use crate::config::Config as PilotConfig;
-use crate::git::GitRepo;
 use crate::debug;
+use crate::git::GitRepo;
 use crate::mcp::tools::utils::{
     PilotTool, apply_custom_instructions, create_text_result, resolve_git_repo,
     validate_repository_parameter,
@@ -55,7 +55,7 @@ impl CodeReviewTool {
     /// Returns the tool definition for the code review tool
     pub fn get_tool_definition() -> Tool {
         Tool {
-            name: Cow::Borrowed("gitpilot_review"),
+            name: Cow::Borrowed("gitai_review"),
             description: Cow::Borrowed(
                 "Generate a comprehensive code review with options for staged changes, unstaged changes, specific commits, or branch comparisons (e.g., PR reviews)",
             ),

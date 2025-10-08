@@ -569,7 +569,7 @@ fn validate_preset_for_review(common: &CommonParams) {
         ui::print_warning(
             "The specified preset may not be suitable for code reviews. Consider using a review or general preset instead.",
         );
-        ui::print_info("Run 'gitpilot presets' to see available presets for reviews.");
+        ui::print_info("Run 'git presets' to see available presets for reviews.");
     }
 }
 
@@ -667,7 +667,7 @@ async fn generate_review_based_on_parameters(
         generate_branch_comparison_review(
             &service,
             &spinner,
-            &random_message,
+            random_message,
             preset_str,
             &effective_instructions,
             from_branch,
@@ -680,7 +680,7 @@ async fn generate_review_based_on_parameters(
         generate_branch_comparison_review(
             &service,
             &spinner,
-            &random_message,
+            random_message,
             preset_str,
             &effective_instructions,
             from_branch,
@@ -692,7 +692,7 @@ async fn generate_review_based_on_parameters(
         generate_commit_review(
             &service,
             &spinner,
-            &random_message,
+            random_message,
             preset_str,
             &effective_instructions,
             &commit_id,
@@ -703,7 +703,7 @@ async fn generate_review_based_on_parameters(
         generate_working_directory_review(
             &service,
             &spinner,
-            &random_message,
+            random_message,
             preset_str,
             &effective_instructions,
             include_unstaged,

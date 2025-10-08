@@ -227,9 +227,8 @@ fn format_detailed_changes(
             .iter()
             .map(|file| {
                 let change_indicator = match file.change_type {
-                    ChangeType::Added => "",
+                    ChangeType::Added | ChangeType::Deleted => "",
                     ChangeType::Modified => "✏️",
-                    ChangeType::Deleted => "",
                 };
 
                 format!(

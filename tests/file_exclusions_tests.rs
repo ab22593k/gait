@@ -1,5 +1,5 @@
 use git2::Repository;
-use gitpilot::{config::Config, git::GitRepo};
+use gitai::{config::Config, git::GitRepo};
 use std::fs;
 use std::path::Path;
 use tempfile::TempDir;

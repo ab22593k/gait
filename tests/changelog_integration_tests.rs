@@ -3,11 +3,11 @@
 use anyhow::Result;
 use dotenv::dotenv;
 use git2::Repository;
-use gitpilot::changes::models::{ChangelogResponse, ReleaseNotesResponse};
-use gitpilot::changes::{ChangelogGenerator, ReleaseNotesGenerator};
-use gitpilot::common::DetailLevel;
-use gitpilot::config::Config;
-use gitpilot::logger;
+use gitai::changes::models::{ChangelogResponse, ReleaseNotesResponse};
+use gitai::changes::{ChangelogGenerator, ReleaseNotesGenerator};
+use gitai::common::DetailLevel;
+use gitai::config::Config;
+use gitai::logger;
 use std::env;
 use tempfile::TempDir;
 
@@ -44,7 +44,7 @@ async fn test_changelog_generation() -> Result<()> {
     let (temp_dir, _repo) = setup_test_repo()?;
     let config = setup_config();
 
-    let repo_path = std::sync::Arc::new(gitpilot::git::GitRepo::new(temp_dir.path())?);
+    let repo_path = std::sync::Arc::new(gitai::git::GitRepo::new(temp_dir.path())?);
     let changelog = ChangelogGenerator::generate(
         repo_path,
         "v1.0.0",
@@ -85,7 +85,7 @@ async fn test_release_notes_generation() -> Result<()> {
     let (temp_dir, _repo) = setup_test_repo()?;
     let config = setup_config();
 
-    let repo_path = std::sync::Arc::new(gitpilot::git::GitRepo::new(temp_dir.path())?);
+    let repo_path = std::sync::Arc::new(gitai::git::GitRepo::new(temp_dir.path())?);
     let release_notes = ReleaseNotesGenerator::generate(
         repo_path,
         "v1.0.0",
@@ -129,7 +129,7 @@ async fn test_changelog_generation_with_custom_version() -> Result<()> {
     let custom_version = "v2.0.0-beta";
 
     // We need to provide a path to GitRepo for this integration test
-    let repo_path = std::sync::Arc::new(gitpilot::git::GitRepo::new(temp_dir.path())?);
+    let repo_path = std::sync::Arc::new(gitai::git::GitRepo::new(temp_dir.path())?);
 
     // Generate changelog with custom version name
     let changelog = ChangelogGenerator::generate(
@@ -170,7 +170,7 @@ async fn test_release_notes_generation_with_custom_version() -> Result<()> {
     let custom_version = "v2.0.0-rc1";
 
     // We need to provide a path to GitRepo for this integration test
-    let repo_path = std::sync::Arc::new(gitpilot::git::GitRepo::new(temp_dir.path())?);
+    let repo_path = std::sync::Arc::new(gitai::git::GitRepo::new(temp_dir.path())?);
 
     // Generate release notes with custom version name
     let release_notes = ReleaseNotesGenerator::generate(

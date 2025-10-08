@@ -1,14 +1,14 @@
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use gitpilot::wire::check;
-use gitpilot::wire::common;
-use gitpilot::wire::sync;
+use gitai::wire::check;
+use gitai::wire::common;
+use gitai::wire::sync;
 use std::process::exit;
 
-pub use gitpilot::CachedRepository;
-pub use gitpilot::RepositoryConfiguration;
-pub use gitpilot::WireOperation;
-use gitpilot::init_logger;
+pub use gitai::CachedRepository;
+pub use gitai::RepositoryConfiguration;
+pub use gitai::WireOperation;
+use gitai::init_logger;
 
 #[derive(Parser)]
 #[command(version, author, about, long_about = None)]

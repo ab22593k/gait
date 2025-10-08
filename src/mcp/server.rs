@@ -1,9 +1,9 @@
 //! MCP server implementation
 //!
 //! This module contains the implementation of the MCP server
-//! that allows `GitPilot` to be used directly from compatible tools.
+//! that allows `gitai` to be used directly from compatible tools.
 
-use crate::config::Config as GitPilotConfig;
+use crate::config::Config as GitAIConfig;
 use crate::debug;
 use crate::git::GitRepo;
 use crate::mcp::config::{MCPServerConfig, MCPTransportType};
@@ -21,7 +21,7 @@ pub async fn serve(config: MCPServerConfig) -> Result<()> {
     // Configure logging based on transport type and dev mode
     if config.dev_mode {
         // In dev mode, set up appropriate logging
-        let log_path = format!("gitpilot-mcp-{}.log", std::process::id());
+        let log_path = format!("gitai-mcp-{}.log", std::process::id());
         if let Err(e) = crate::logger::set_log_file(&log_path) {
             // For non-stdio transports, we can print this error
             if config.transport != MCPTransportType::StdIO {
@@ -46,7 +46,7 @@ pub async fn serve(config: MCPServerConfig) -> Result<()> {
     if config.transport != MCPTransportType::StdIO {
         use crate::ui;
         ui::print_info(&format!(
-            "Starting GitPilot MCP server with {:?} transport",
+            "Starting gitai MCP server with {:?} transport",
             config.transport
         ));
         if let Some(port) = config.port {
@@ -72,8 +72,8 @@ pub async fn serve(config: MCPServerConfig) -> Result<()> {
         git_repo.repo_path().display()
     );
 
-    let pilot_config = GitPilotConfig::load()?;
-    debug!("Loaded GitPilot configuration");
+    let pilot_config = GitAIConfig::load()?;
+    debug!("Loaded gitai configuration");
 
     // Create the handler with necessary dependencies
     let handler = PilotHandler::new(git_repo, pilot_config);

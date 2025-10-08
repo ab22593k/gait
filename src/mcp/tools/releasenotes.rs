@@ -4,8 +4,8 @@
 
 use crate::changes::ReleaseNotesGenerator;
 use crate::config::Config as PilotConfig;
-use crate::git::GitRepo;
 use crate::debug;
+use crate::git::GitRepo;
 use crate::mcp::tools::utils::{
     PilotTool, apply_custom_instructions, create_text_result, parse_detail_level, resolve_git_repo,
     validate_repository_parameter,
@@ -49,7 +49,7 @@ impl ReleaseNotesTool {
     /// Returns the tool definition for the release notes tool
     pub fn get_tool_definition() -> Tool {
         Tool {
-            name: Cow::Borrowed("gitpilot_release_notes"),
+            name: Cow::Borrowed("gitai_release_notes"),
             description: Cow::Borrowed(
                 "Generate comprehensive release notes between two Git references",
             ),

@@ -1,4 +1,4 @@
-use gitpilot::wire::CachedRepository;
+use gitai::wire::CachedRepository;
 
 const EXAMPLE_REPO_URL: &str = "https://github.com/example/repo.git";
 

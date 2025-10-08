@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use gitpilot::{
+    use gitai::{
         config::Config,
         git::GitRepo,
         mcp::tools::{PilotTools, PrTool, ReleaseNotesTool, utils::PilotTool},
@@ -87,7 +87,7 @@ mod tests {
         let mut params = args.clone();
         params.insert(
             "name".to_string(),
-            Value::String("gitpilot_release_notes".to_string()),
+            Value::String("gitai_release_notes".to_string()),
         );
 
         // Convert to our PilotTools enum
@@ -136,24 +136,24 @@ mod tests {
         // Should have 5 tools now (including the new PR tool)
         assert_eq!(tools.len(), 5);
 
-        // Check that gitpilot_pr is included
-        let pr_tool_exists = tools.iter().any(|tool| tool.name == "gitpilot_pr");
-        assert!(pr_tool_exists, "gitpilot_pr tool should be available");
+        // Check that gitai_pr is included
+        let pr_tool_exists = tools.iter().any(|tool| tool.name == "gitai_pr");
+        assert!(pr_tool_exists, "gitai_pr tool should be available");
 
         // Check that all expected tools are present
         let tool_names: Vec<&str> = tools.iter().map(|tool| tool.name.as_ref()).collect();
-        assert!(tool_names.contains(&"gitpilot_commit"));
-        assert!(tool_names.contains(&"gitpilot_review"));
-        assert!(tool_names.contains(&"gitpilot_pr"));
-        assert!(tool_names.contains(&"gitpilot_changelog"));
-        assert!(tool_names.contains(&"gitpilot_release_notes"));
+        assert!(tool_names.contains(&"gitai_commit"));
+        assert!(tool_names.contains(&"gitai_review"));
+        assert!(tool_names.contains(&"gitai_pr"));
+        assert!(tool_names.contains(&"gitai_changelog"));
+        assert!(tool_names.contains(&"gitai_release_notes"));
     }
 
     #[test]
     fn test_pr_tool_definition() {
         let tool = PrTool::get_tool_definition();
 
-        assert_eq!(tool.name, "gitpilot_pr");
+        assert_eq!(tool.name, "gitai_pr");
         assert!(tool.description.contains("pull request descriptions"));
         assert!(tool.description.contains("atomic unit"));
 

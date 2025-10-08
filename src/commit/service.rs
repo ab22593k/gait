@@ -713,7 +713,7 @@ impl CommitService {
 
         if !self.verify {
             debug!("Skipping pre-commit hook (verify=false)");
-            return self.repo.commit(&message);
+            return self.repo.commit(message);
         }
 
         // Execute pre-commit hook
@@ -725,7 +725,7 @@ impl CommitService {
         debug!("Pre-commit hook executed successfully");
 
         // Perform the commit
-        match self.repo.commit(&message) {
+        match self.repo.commit(message) {
             Ok(result) => {
                 // Execute post-commit hook
                 debug!("Executing post-commit hook");

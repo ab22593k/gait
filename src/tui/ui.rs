@@ -66,9 +66,8 @@ fn render_sections(f: &mut Frame, state: &mut TuiState, chunks: &[Rect]) {
 
 /// Renders modal popups if active
 fn render_popups(f: &mut Frame, state: &mut TuiState) {
-    match state.mode {
-        Mode::SelectingPreset => draw_preset_popup(f, state),
-        _ => {}
+    if state.mode == Mode::SelectingPreset {
+        draw_preset_popup(f, state);
     }
 }
 

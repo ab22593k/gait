@@ -1,9 +1,9 @@
 #![cfg(feature = "integration")]
 
 use anyhow::Result;
-use gitpilot::app::PilotCMD;
-use gitpilot::common::CommonParams;
-use gitpilot::git::GitRepo;
+use gitai::app::PilotCMD;
+use gitai::common::CommonParams;
+use gitai::git::GitRepo;
 use std::env;
 
 // Test the CLI with a remote repository URL
@@ -42,7 +42,7 @@ async fn test_cli_with_remote_repository() -> Result<()> {
     };
 
     // Just testing that it doesn't panic, we're not making actual API calls
-    let result = gitpilot::app::handle_command(release_notes_command, None).await;
+    let result = gitai::app::handle_command(release_notes_command, None).await;
     assert!(
         result.is_err(),
         "Command should fail because we're using a mock provider"
@@ -59,7 +59,7 @@ async fn test_cli_with_remote_repository() -> Result<()> {
     };
 
     // Just testing that it doesn't panic
-    let result = gitpilot::app::handle_command(changelog_command, None).await;
+    let result = gitai::app::handle_command(changelog_command, None).await;
     assert!(
         result.is_err(),
         "Command should fail because we're using a mock provider"
@@ -76,7 +76,7 @@ async fn test_cli_with_remote_repository() -> Result<()> {
     };
 
     // Just testing that it doesn't panic
-    let result = gitpilot::app::handle_command(review_command, None).await;
+    let result = gitai::app::handle_command(review_command, None).await;
     assert!(
         result.is_err(),
         "Command should fail because we're using a mock provider"
@@ -92,7 +92,7 @@ async fn test_cli_with_remote_repository() -> Result<()> {
     };
 
     // Just testing that it doesn't panic
-    let result = gitpilot::app::handle_command(gen_command, None).await;
+    let result = gitai::app::handle_command(gen_command, None).await;
     assert!(
         result.is_err(),
         "Command should fail because we're using a mock provider"

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use clap::Parser;
-use gitpilot::app::{self, CmsgConfig};
-use gitpilot::common::CommonParams;
-use gitpilot::logger;
+use gitai::app::{self, CmsgConfig};
+use gitai::common::CommonParams;
+use gitai::logger;
 
 #[derive(Parser)]
 #[command(name = "git-message", about = "Generate a commit message using AI")]

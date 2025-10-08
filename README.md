@@ -17,25 +17,25 @@ AI-powered Git toolkit that enhances workflow with intelligent commit messages, 
 ### From Source
 
 ```bash
-git clone https://github.com/ab22593k/gitpilot.git
-cd gitpilot
+git clone https://github.com/ab22593k/gitai.git
+cd gitai
 cargo build --release
 ```
 
 ## Configuration
 
-Gitpilot uses Git config to store settings. Configure your LLM provider:
+gitai uses Git config to store settings. Configure your LLM provider:
 
 ```bash
 # Set global provider (e.g., Google Gemini)
-git config --global gitpilot.defaultprovider google
-git config --global gitpilot.google-apikey "your-api-key"
-git config --global gitpilot.google-model "gemini-1.5-pro"
+git config --global gitai.defaultprovider google
+git config --global gitai.google-apikey "your-api-key"
+git config --global gitai.google-model "gemini-1.5-pro"
 
 # Or set locally for a project
-git config --local gitpilot.defaultprovider google
-git config --local gitpilot.google-apikey "your-api-key"
-git config --local gitpilot.google-model "gemini-1.5-flash"
+git config --local gitai.defaultprovider google
+git config --local gitai.google-apikey "your-api-key"
+git config --local gitai.google-model "gemini-1.5-flash"
 ```
 
 Supported providers: `openai`, `anthropic`, `google`, `cohere`, `groq`, `ollama`, etc.

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use gitpilot::{app, logger};
+use gitai::{app, logger};
 
 #[derive(Parser)]
 #[command(

@@ -1,4 +1,4 @@
-use gitpilot::llm::{
+use gitai::llm::{
     get_available_provider_names, get_default_model_for_provider,
     get_default_token_limit_for_provider, validate_provider_config,
 };

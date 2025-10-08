@@ -1,4 +1,4 @@
-use gitpilot::wire::{
+use gitai::wire::{
     RepositoryConfiguration, WireOperation, cache::key_generator::CacheKeyGenerator,
 };
 

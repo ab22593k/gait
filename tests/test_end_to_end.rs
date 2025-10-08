@@ -1,6 +1,4 @@
-use gitpilot::wire::{
-    CacheManager, RepositoryConfiguration, cache::key_generator::CacheKeyGenerator,
-};
+use gitai::wire::{CacheManager, RepositoryConfiguration, cache::key_generator::CacheKeyGenerator};
 use std::time::Instant;
 
 #[test]

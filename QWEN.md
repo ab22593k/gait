@@ -1,10 +1,9 @@
-# GitPilot Project Documentation
+# GitAI Project Documentation
 
 ## Project Overview
 
-gitpilot is a Rust project that provides AI-powered Git workflow assistance and repository wiring tools. The project contains multiple binaries:
+gitai is a Rust project that provides AI-powered Git workflow assistance and repository wiring tools. The project contains multiple binaries:
 
-1. **gitpilot** - Main AI-powered Git workflow assistant that enhances development processes
 2. **git-review** - Intelligent code reviews with quality dimensions
 3. **git-pr** - Git pull request management
 4. **git-changelog** - Dynamic changelog generation
@@ -25,8 +24,7 @@ The project also includes a sophisticated specification and planning system (`.s
 
 ## Key Features
 
-### GitPilot Tools
-- **gitpilot** - Main CLI with AI-powered Git workflow assistance
+### GitAI Tools
 - **git-review** - Intelligent code reviews with quality dimensions
 - **git-pr** - Pull request management and analysis
 - **git-changelog** - Dynamic changelog generation from commits
@@ -66,7 +64,6 @@ cargo build
 cargo build --release
 
 # Build specific binary
-cargo build --bin gitpilot
 cargo build --bin git-review
 cargo build --bin git-wire
 ```
@@ -74,7 +71,6 @@ cargo build --bin git-wire
 ### Running Commands
 ```bash
 # Run individual tools (after building or installing)
-gitpilot                    # Main CLI tool
 git-review                  # Code review
 git-pr                      # Pull request management
 git-changelog               # Generate changelog
@@ -85,7 +81,6 @@ git-wire sync               # Sync external repositories
 git-wire check              # Check for differences
 
 # Install binaries
-cargo install --bin gitpilot
 cargo install --bin git-review
 cargo install --bin git-wire
 # etc. for other binaries
@@ -103,7 +98,7 @@ cargo install --bin git-wire
 
 The `/commands/` directory contains AI workflow definitions in TOML format:
 - `analyze.toml` - Analysis workflows
-- `clarify.toml` - Clarification workflows  
+- `clarify.toml` - Clarification workflows
 - `constitution.toml` - Constitution/structure workflows
 - `implement.toml` - Implementation execution
 - `plan.toml` - Planning workflows
@@ -127,7 +122,7 @@ The project is actively developed, providing a suite of AI-powered Git tools wit
 
 ## Project Direction
 
-gitpilot provides a comprehensive AI-assisted development environment that combines:
+gitai provides a comprehensive AI-assisted development environment that combines:
 1. Git workflow automation (via multiple specialized tools)
 2. Cross-repository code management (via git-wire)
 3. Specification-driven development (via the .specify system)

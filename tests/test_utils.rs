@@ -1,5 +1,5 @@
 use git2::Repository;
-use gitpilot::{
+use gitai::{
     changes::{
         change_analyzer::{AnalyzedChange, FileChange},
         models::{ChangeMetrics, ChangelogType},

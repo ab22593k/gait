@@ -49,7 +49,7 @@ pub struct CommonParams {
     /// Select an instruction preset
     #[arg(
         long,
-        help = "Select an instruction preset (use 'gitpilot presets' to see available presets for commits and reviews)"
+        help = "Select an instruction preset (use 'git presets' to see available presets for commits and reviews)"
     )]
     pub preset: Option<String>,
 

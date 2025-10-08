@@ -1,4 +1,4 @@
-use gitpilot::{
+use gitai::{
     changes::{
         change_analyzer::AnalyzedChange,
         models::ChangeMetrics,

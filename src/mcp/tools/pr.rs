@@ -5,8 +5,8 @@
 use crate::commit::service::CommitService;
 use crate::commit::types::format_pull_request;
 use crate::config::Config as PilotConfig;
-use crate::git::GitRepo;
 use crate::debug;
+use crate::git::GitRepo;
 use crate::mcp::tools::utils::{
     PilotTool, apply_custom_instructions, create_text_result, resolve_git_repo,
     validate_repository_parameter,
@@ -46,7 +46,7 @@ impl PrTool {
     /// Returns the tool definition for the PR description tool
     pub fn get_tool_definition() -> Tool {
         Tool {
-            name: Cow::Borrowed("gitpilot_pr"),
+            name: Cow::Borrowed("gitai_pr"),
             description: Cow::Borrowed(
                 "Generate comprehensive pull request descriptions for changesets spanning multiple commits. Analyzes commits and changes as an atomic unit.",
             ),

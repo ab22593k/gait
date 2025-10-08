@@ -33,7 +33,10 @@ impl RepositoryFetcher {
     }
 
     /// Execute the git clone command with error handling
-    fn execute_git_clone(config: &RepositoryConfiguration, cache_path: &str) -> Result<(), Cause<ErrorType>> {
+    fn execute_git_clone(
+        config: &RepositoryConfiguration,
+        cache_path: &str,
+    ) -> Result<(), Cause<ErrorType>> {
         // Remove the cache directory if it exists
         if std::path::Path::new(cache_path).exists() {
             std::fs::remove_dir_all(cache_path)
@@ -43,11 +46,21 @@ impl RepositoryFetcher {
         if matches!(config.mtd, Some(Method::ShallowNoSparse)) {
             // Use git command for shallow clone with branch
             let output = Command::new("git")
-                .args(&["clone", "--depth", "1", "--branch", &config.branch, &config.url, cache_path])
+                .args([
+                    "clone",
+                    "--depth",
+                    "1",
+                    "--branch",
+                    &config.branch,
+                    &config.url,
+                    cache_path,
+                ])
                 .output()
                 .map_err(|e| cause!(ErrorType::GitCloneCommand).src(e))?;
             if !output.status.success() {
-                return Err(cause!(ErrorType::GitCloneCommand).msg(String::from_utf8_lossy(&output.stderr)));
+                return Err(
+                    cause!(ErrorType::GitCloneCommand).msg(String::from_utf8_lossy(&output.stderr))
+                );
             }
         } else {
             Repository::clone(&config.url, cache_path)

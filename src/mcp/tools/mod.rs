@@ -11,8 +11,8 @@ pub mod releasenotes;
 pub mod utils;
 
 use crate::config::Config as PilotConfig;
-use crate::git::GitRepo;
 use crate::debug;
+use crate::git::GitRepo;
 use crate::mcp::tools::utils::PilotTool;
 
 use rmcp::Error;
@@ -68,31 +68,31 @@ impl PilotTools {
             .ok_or_else(|| Error::invalid_params("Tool name not specified", None))?;
 
         match tool_name {
-            "gitpilot_release_notes" => {
+            "gitai_release_notes" => {
                 // Convert params to ReleaseNotesTool
                 let tool: ReleaseNotesTool = serde_json::from_value(Value::Object(params))
                     .map_err(|e| Error::invalid_params(format!("Invalid parameters: {e}"), None))?;
                 Ok(PilotTools::ReleaseNotesTool(tool))
             }
-            "gitpilot_changelog" => {
+            "gitai_changelog" => {
                 // Convert params to ChangelogTool
                 let tool: ChangelogTool = serde_json::from_value(Value::Object(params))
                     .map_err(|e| Error::invalid_params(format!("Invalid parameters: {e}"), None))?;
                 Ok(PilotTools::ChangelogTool(tool))
             }
-            "gitpilot_commit" => {
+            "gitai_commit" => {
                 // Convert params to CommitTool
                 let tool: CommitTool = serde_json::from_value(Value::Object(params))
                     .map_err(|e| Error::invalid_params(format!("Invalid parameters: {e}"), None))?;
                 Ok(PilotTools::CommitTool(tool))
             }
-            "gitpilot_review" => {
+            "gitai_review" => {
                 // Convert params to CodeReviewTool
                 let tool: CodeReviewTool = serde_json::from_value(Value::Object(params))
                     .map_err(|e| Error::invalid_params(format!("Invalid parameters: {e}"), None))?;
                 Ok(PilotTools::CodeReviewTool(tool))
             }
-            "gitpilot_pr" => {
+            "gitai_pr" => {
                 // Convert params to PrTool
                 let tool: PrTool = serde_json::from_value(Value::Object(params))
                     .map_err(|e| Error::invalid_params(format!("Invalid parameters: {e}"), None))?;
@@ -145,7 +145,7 @@ impl PilotHandler {
 impl ServerHandler for PilotHandler {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
-            instructions: Some("`gitpilot` is an AI-powered Git workflow assistant. You can use it to generate commit messages, review code, create changelogs and release notes.".to_string()),
+            instructions: Some("`gitai` is an AI-powered Git workflow assistant. You can use it to generate commit messages, review code, create changelogs and release notes.".to_string()),
             capabilities: ServerCapabilities::builder()
                 .enable_tools()
                 .build(),

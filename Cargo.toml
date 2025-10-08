@@ -1,12 +1,12 @@
 [package]
-name = "gitpilot"
+name = "gitai"
 description = "AI-powered toolkit that enhances `Git` workflow"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 
 [lib]
-name = "gitpilot"
+name = "gitai"
 path = "src/lib.rs"
 
 [[bin]]

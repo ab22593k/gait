@@ -1,4 +1,4 @@
-use gitpilot::{
+use gitai::{
     commit::review::{CodeIssue, DimensionAnalysis, GeneratedReview},
     mcp::tools::codereview::CodeReviewTool,
 };

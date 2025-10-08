@@ -1,4 +1,4 @@
-use gitpilot::wire::{CachedRepository, RepositoryConfiguration, WireOperation};
+use gitai::wire::{CachedRepository, RepositoryConfiguration, WireOperation};
 use std::sync::{
     Arc, Mutex,
     atomic::{AtomicBool, Ordering},

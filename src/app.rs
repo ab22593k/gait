@@ -15,7 +15,7 @@ use colored::Colorize;
 #[command(
     author,
     version = crate_version!(),
-    about = "GitPilot: AI-powered Git workflow assistant",
+    about = "GitAI: AI-powered Git workflow assistant",
     disable_version_flag = true,
     after_help = get_dynamic_help(),
     styles = get_styles(),
