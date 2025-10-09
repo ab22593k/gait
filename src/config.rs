@@ -51,7 +51,7 @@ pub struct ProviderConfig {
 
 /// Default function for `use_emoji`
 fn default_emoji() -> bool {
-    true
+    false
 }
 
 // Default instruction preset to use
