@@ -18,5 +18,5 @@ pub use utils::*;
 pub use metadata::extract_project_metadata;
 
 // Re-export type aliases to maintain backward compatibility
-pub use crate::context::{RecentCommit, StagedFile};
+pub use crate::core::context::{RecentCommit, StagedFile};
 pub use files::RepoFilesInfo;

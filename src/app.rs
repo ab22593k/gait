@@ -1,11 +1,10 @@
-use crate::changes;
-use crate::commit;
 use crate::common::CommonParams;
-use crate::debug;
-use crate::llm::get_available_provider_names;
-use crate::mcp::config::{MCPServerConfig, MCPTransportType};
-use crate::mcp::server;
+use crate::core::llm::get_available_provider_names;
+use crate::features::changelog::{handle_changelog_command, handle_release_notes_command};
+use crate::features::commit;
+use crate::server::config::{MCPServerConfig, MCPTransportType};
 use crate::ui;
+use crate::{debug, server};
 use clap::builder::{Styles, styling::AnsiColor};
 use clap::{Parser, Subcommand, crate_version};
 use colored::Colorize;
@@ -380,8 +379,7 @@ pub async fn handle_changelog(
         "Handling 'changelog' command with common: {:?}, from: {}, to: {:?}, update: {}, file: {:?}, version_name: {:?}",
         common, from, to, update, file, version_name
     );
-    changes::handle_changelog_command(common, from, to, repository_url, update, file, version_name)
-        .await
+    handle_changelog_command(common, from, to, repository_url, update, file, version_name).await
 }
 
 /// Handle the `ReleaseNotes` command
@@ -396,7 +394,7 @@ pub async fn handle_release_notes(
         "Handling 'release-notes' command with common: {:?}, from: {}, to: {:?}, version_name: {:?}",
         common, from, to, version_name
     );
-    changes::handle_release_notes_command(common, from, to, repository_url, version_name).await
+    handle_release_notes_command(common, from, to, repository_url, version_name).await
 }
 
 /// Handle the command based on parsed arguments

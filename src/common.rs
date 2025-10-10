@@ -1,6 +1,6 @@
 use crate::config::Config;
+use crate::core::llm::get_available_provider_names;
 use crate::instruction_presets::{PresetType, get_instruction_preset_library};
-use crate::llm;
 use anyhow::Result;
 use clap::Args;
 use std::fmt::Write;
@@ -145,7 +145,7 @@ pub fn available_providers_parser(s: &str) -> Result<String, String> {
         provider_name = "anthropic".to_string();
     }
 
-    let available_providers = llm::get_available_provider_names();
+    let available_providers = get_available_provider_names();
 
     if available_providers
         .iter()

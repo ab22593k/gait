@@ -1,5 +1,6 @@
+use crate::core::context::StagedFile;
+
 use super::{FileAnalyzer, ProjectMetadata};
-use crate::context::StagedFile;
 use regex::Regex;
 use std::collections::HashSet;
 

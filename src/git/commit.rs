@@ -1,4 +1,4 @@
-use crate::context::{ChangeType, RecentCommit, StagedFile};
+use crate::core::context::{ChangeType, RecentCommit, StagedFile};
 use crate::debug;
 use crate::git::utils::is_binary_diff;
 use anyhow::{Context, Result, anyhow};

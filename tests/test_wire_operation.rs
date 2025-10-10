@@ -1,5 +1,5 @@
-use gitai::wire::{
-    RepositoryConfiguration, WireOperation, cache::key_generator::CacheKeyGenerator,
+use gitai::{
+    RepositoryConfiguration, WireOperation, remote::cache::key_generator::CacheKeyGenerator,
 };
 
 #[test]

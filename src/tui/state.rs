@@ -1,9 +1,9 @@
-use crate::commit::types::{GeneratedMessage, format_commit_message};
+use super::spinner::SpinnerState;
+use crate::features::commit::types::{GeneratedMessage, format_commit_message};
 use crate::instruction_presets::{get_instruction_preset_library, list_presets_formatted};
+
 use ratatui::widgets::ListState;
 use tui_textarea::TextArea;
-
-use super::spinner::SpinnerState;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Mode {

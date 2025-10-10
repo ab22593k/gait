@@ -1,4 +1,4 @@
-use gitai::wire::{CachedRepository, RepositoryConfiguration, WireOperation};
+use gitai::{CachedRepository, RepositoryConfiguration, WireOperation};
 use std::collections::HashMap;
 
 #[test]

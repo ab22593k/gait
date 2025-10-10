@@ -1,11 +1,10 @@
-use gitai::llm::{
-    get_available_provider_names, get_default_model_for_provider,
-    get_default_token_limit_for_provider, validate_provider_config,
-};
-
 // Use our centralized test infrastructure
 #[path = "test_utils.rs"]
 mod test_utils;
+use gitai::core::llm::{
+    get_available_provider_names, get_default_model_for_provider,
+    get_default_token_limit_for_provider, validate_provider_config,
+};
 use test_utils::MockDataBuilder;
 
 #[test]

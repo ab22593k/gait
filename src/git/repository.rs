@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::context::{CommitContext, ProjectMetadata, RecentCommit, StagedFile};
+use crate::core::context::{CommitContext, ProjectMetadata, RecentCommit, StagedFile};
 use crate::debug;
 use crate::git::commit::{self, CommitResult};
 use crate::git::files::{RepoFilesInfo, get_file_statuses, get_unstaged_file_statuses};

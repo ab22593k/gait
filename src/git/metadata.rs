@@ -1,4 +1,4 @@
-use crate::context::ProjectMetadata;
+use crate::core::context::ProjectMetadata;
 use crate::debug;
 use crate::file_analyzers;
 use anyhow::Result;

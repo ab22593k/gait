@@ -1,7 +1,5 @@
-use gitai::{
-    context::{ChangeType, CommitContext, ProjectMetadata, RecentCommit, StagedFile},
-    token_optimizer::TokenOptimizer,
-};
+use gitai::core::context::{ChangeType, CommitContext, ProjectMetadata, RecentCommit, StagedFile};
+use gitai::core::token_optimizer::TokenOptimizer;
 
 // Use our centralized test infrastructure
 #[path = "test_utils.rs"]

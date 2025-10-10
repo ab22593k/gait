@@ -1,8 +1,10 @@
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use gitai::wire::check;
-use gitai::wire::common;
-use gitai::wire::sync;
+use gitai::remote::check;
+use gitai::remote::common::Parsed;
+use gitai::remote::common::Target;
+use gitai::remote::common::sequence;
+use gitai::remote::sync;
 use std::process::exit;
 
 pub use gitai::CachedRepository;
@@ -63,8 +65,6 @@ enum Command {
     },
 }
 
-use common::{Parsed, Target};
-
 fn main() {
     init_logger();
 
@@ -73,9 +73,9 @@ fn main() {
     let target = cli.target.or(cli.name);
 
     let mode = if cli.singlethread {
-        common::sequence::Mode::Single
+        sequence::Mode::Single
     } else {
-        common::sequence::Mode::Parallel
+        sequence::Mode::Parallel
     };
 
     let result = match cli.command {

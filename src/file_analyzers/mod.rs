@@ -2,7 +2,7 @@ use regex::Regex;
 use std::path::Path;
 
 use crate::{
-    context::{ProjectMetadata, StagedFile},
+    core::context::{ProjectMetadata, StagedFile},
     debug,
 };
 

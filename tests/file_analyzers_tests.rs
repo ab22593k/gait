@@ -1,5 +1,5 @@
 use gitai::{
-    context::{ChangeType, StagedFile},
+    core::context::{ChangeType, StagedFile},
     file_analyzers::{get_analyzer, should_exclude_file},
 };
 

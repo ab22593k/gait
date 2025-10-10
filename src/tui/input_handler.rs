@@ -1,7 +1,8 @@
 use super::app::TuiCommit;
 use super::spinner::SpinnerState;
 use super::state::Mode;
-use crate::commit::types::format_commit_message;
+use crate::features::commit::types::format_commit_message;
+
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub fn handle_input(app: &mut TuiCommit, key: KeyEvent) -> InputResult {

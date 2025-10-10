@@ -1,12 +1,14 @@
 use git2::Repository;
 use gitai::{
-    changes::{
-        change_analyzer::{AnalyzedChange, FileChange},
-        models::{ChangeMetrics, ChangelogType},
-    },
-    commit::types::GeneratedPullRequest,
     config::{Config, ProviderConfig},
-    context::{ChangeType, CommitContext, ProjectMetadata, RecentCommit, StagedFile},
+    core::context::{ChangeType, CommitContext, ProjectMetadata, RecentCommit, StagedFile},
+    features::{
+        changelog::{
+            change_analyzer::{AnalyzedChange, FileChange},
+            models::{ChangeMetrics, ChangelogType},
+        },
+        commit::types::GeneratedPullRequest,
+    },
     git::GitRepo,
 };
 

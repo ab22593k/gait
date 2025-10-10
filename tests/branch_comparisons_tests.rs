@@ -1,4 +1,4 @@
-use gitai::context::ChangeType;
+use gitai::core::context::ChangeType;
 use std::fs;
 use std::path::Path;
 

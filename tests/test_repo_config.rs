@@ -1,4 +1,4 @@
-use gitai::wire::RepositoryConfiguration;
+use gitai::RepositoryConfiguration;
 
 #[test]
 fn test_repository_configuration_creation() {

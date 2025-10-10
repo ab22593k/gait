@@ -1,7 +1,7 @@
 use gitai::{
-    commit::prompt::{create_system_prompt, create_user_prompt},
     config::Config,
-    token_optimizer::TokenOptimizer,
+    core::token_optimizer::TokenOptimizer,
+    features::commit::prompt::{create_system_prompt, create_user_prompt},
 };
 
 // Use our centralized test infrastructure

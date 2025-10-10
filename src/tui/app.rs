@@ -1,23 +1,24 @@
-use crate::commit::types::GeneratedMessage;
-use crate::commit::{CommitService, format_commit_result};
-use crate::debug;
-use anyhow::{Error, Result};
-use crossterm::event::KeyEventKind;
-use ratatui::Terminal;
-use ratatui::backend::CrosstermBackend;
-use ratatui::crossterm::{
-    event::{self, Event},
-    execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
-use std::io;
-use std::sync::Arc;
-use std::time::Duration;
-
 use super::input_handler::{InputResult, handle_input};
 use super::spinner::SpinnerState;
 use super::state::{Mode, TuiState};
 use super::ui::draw_ui;
+use crate::debug;
+use crate::features::commit::{CommitService, format_commit_result, types::GeneratedMessage};
+use anyhow::{Error, Result};
+use crossterm::event::KeyEventKind;
+use ratatui::{
+    Terminal,
+    backend::CrosstermBackend,
+    crossterm::{
+        event::{self, Event},
+        execute,
+        terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    },
+};
+
+use std::io;
+use std::sync::Arc;
+use std::time::Duration;
 
 pub struct TuiCommit {
     pub state: TuiState,

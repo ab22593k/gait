@@ -5,7 +5,7 @@ mod tests {
     use gitai::{
         config::Config,
         git::GitRepo,
-        mcp::tools::{PilotTools, PrTool, ReleaseNotesTool, utils::PilotTool},
+        server::tools::{PilotTools, PrTool, ReleaseNotesTool, utils::PilotTool},
     };
 
     use rmcp::model::{Content, RawContent};

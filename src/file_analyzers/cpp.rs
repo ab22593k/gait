@@ -1,7 +1,8 @@
-use super::{FileAnalyzer, ProjectMetadata};
-use crate::context::StagedFile;
 use regex::Regex;
 use std::collections::HashSet;
+
+use super::{FileAnalyzer, ProjectMetadata};
+use crate::core::context::StagedFile;
 
 // Regex for extracting CMake project version
 static CMAKE_VERSION_RE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
