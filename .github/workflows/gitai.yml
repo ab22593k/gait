@@ -8,12 +8,12 @@ on:
       - "v*.*.*" # Trigger on version tags
   pull_request:
     branches:
-      - main # Trigger on pull requests to main branch
+      - main
 
 jobs:
   # This job runs for all pushes and pull requests
   build-and-test:
-    name: 🧪 Build & Test (${{ matrix.build }})
+    name: Build & Test ${{ matrix.build }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -34,56 +34,56 @@ jobs:
             cmd: cargo
 
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🦀 Install Rust
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
 
-      - name: 📦 Rust cache
+      - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           # Let action generate cache keys automatically
           workspaces: ". -> target"
 
-      - name: 🔍 Run fmt check
+      - name: Run fmt check
         run: cargo fmt --all -- --check
 
-      - name: 🔍 Run clippy
+      - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: 🧪 Run tests
+      - name: Run tests
         run: |
           echo "::group::Running tests (${{ matrix.build }})"
           ${{ matrix.cmd }} test --verbose --locked --target ${{ matrix.target }}
           echo "::endgroup::"
 
   docs:
-    name: 📚 Documentation
+    name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🦀 Install Rust
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: 📦 Rust cache
+      - name: Rust cache
         uses: Swatinem/rust-cache@v2
 
-      - name: 📚 Check documentation
+      - name: Check documentation
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --workspace --no-deps --document-private-items
 
     # The following jobs only run on tag pushes (i.e., releases)
   build-artifacts:
-    name: 📦 Build Artifacts (${{ matrix.build }})
+    name: Build Artifacts ${{ matrix.build }}
     if: startsWith(github.ref, 'refs/tags/')
     needs: build-and-test
     runs-on: ${{ matrix.os }}
@@ -93,54 +93,58 @@ jobs:
           - build: linux-amd64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            binary_name: gitai
 
           - build: windows-gnu
             os: windows-latest
             target: x86_64-pc-windows-gnu
-            binary_name: gitai.exe
 
           - build: macos-amd64
             os: macos-latest
             target: x86_64-apple-darwin
-            binary_name: gitai
 
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🦀 Install Rust
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
 
-      - name: 📦 Rust cache
+      - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           # Let action generate cache keys automatically
-          workspaces: ". -> target/${{ matrix.target }}/release"
+          workspaces: ". -> target/release"
           # Additional cache suffix for release builds
           cache-on-failure: true
 
-      - name: 🔨 Build release binary
+      - name: Build release binary
         run: |
           echo "::group::Building release binary (${{ matrix.build }})"
           cargo build --verbose --locked --release --target ${{ matrix.target }}
           echo "::endgroup::"
 
-      - name: 📤 Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: gitai-${{ matrix.build }}
-          path: ./target/${{ matrix.target }}/release/${{ matrix.binary_name }}
+          path: |
+            ./target/${{ matrix.target }}/release/git-changelog${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+            ./target/${{ matrix.target }}/release/git-message${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+            ./target/${{ matrix.target }}/release/git-pr${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+            ./target/${{ matrix.target }}/release/git-release-notes${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+            ./target/${{ matrix.target }}/release/git-review${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+            ./target/${{ matrix.target }}/release/git-serve${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+            ./target/${{ matrix.target }}/release/git-wire${{ matrix.os == 'windows-latest' && '.exe' || '' }}
           if-no-files-found: error
           retention-days: 1
 
   build-packages:
-    name: 📦 Build Packages
+    name: Build Packages
     if: startsWith(github.ref, 'refs/tags/')
     needs: build-and-test
     runs-on: ${{ matrix.os }}
@@ -156,22 +160,22 @@ jobs:
     outputs:
       version: ${{ steps.get_version.outputs.VERSION }}
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🏷️ Get version
+      - name: Get version
         id: get_version
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
-      - name: 🦀 Install Rust
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
           components: rustfmt, clippy
 
-      - name: 📦 Setup cross-compilation (ARM64)
+      - name: Setup cross-compilation (ARM64)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
@@ -179,7 +183,7 @@ jobs:
           echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
-      - name: 📦 Rust cache
+      - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
           # Let action generate cache keys automatically
@@ -187,10 +191,10 @@ jobs:
           cache-on-failure: true
 
       # Build DEB package
-      - name: 📦 Install cargo-deb
+      - name: Install cargo-deb
         run: cargo install cargo-deb
 
-      - name: 🔨 Build .deb package
+      - name: Build .deb package
         env:
           RUSTFLAGS: ${{ matrix.rust_flags }}
         run: |
@@ -198,7 +202,7 @@ jobs:
           cargo deb --target ${{ matrix.target }}
           echo "::endgroup::"
 
-      - name: 📤 Upload DEB artifact
+      - name: Upload DEB artifact
         uses: actions/upload-artifact@v4
         with:
           name: gitai-deb-${{ matrix.arch_suffix }}
@@ -207,15 +211,15 @@ jobs:
           retention-days: 1
 
       # Build RPM package
-      - name: 📦 Install cargo-generate-rpm
+      - name: Install cargo-generate-rpm
         run: cargo install cargo-generate-rpm
 
-      - name: 🔨 Build Release Binary for RPM
+      - name: Build Release Binary for RPM
         env:
           RUSTFLAGS: ${{ matrix.rust_flags }}
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: 🔨 Build .rpm package
+      - name: Build .rpm package
         env:
           RUSTFLAGS: ${{ matrix.rust_flags }}
         run: |
@@ -223,7 +227,7 @@ jobs:
           cargo generate-rpm --target ${{ matrix.target }}
           echo "::endgroup::"
 
-      - name: 📤 Upload RPM artifact
+      - name: Upload RPM artifact
         uses: actions/upload-artifact@v4
         with:
           name: gitai-rpm-${{ matrix.arch_suffix }}
@@ -231,67 +235,57 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      # Upload man page as artifact (only once)
-      - name: 📤 Upload man page artifact
-        if: matrix.build == 'linux-amd64'
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitai-man
-          path: ./gitai.1
-          if-no-files-found: error
-          retention-days: 1
-
   # Add crates.io publishing
   cargo-publish:
-    name: 📦 Publish to crates.io
+    name: Publish to crates.io
     if: startsWith(github.ref, 'refs/tags/')
     needs: [build-artifacts, build-packages]
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 🦀 Install Rust
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
-      - name: 📦 Rust cache
+      - name: Rust cache
         uses: Swatinem/rust-cache@v2
 
-      - name: 🔑 Setup crates.io token
+      - name: Setup crates.io token
         run: cargo login ${{ secrets.CRATES_IO_TOKEN }}
 
-      - name: 📤 Publish to crates.io
+      - name: Publish to crates.io
         run: |
           echo "::group::Publishing to crates.io"
           cargo publish
           echo "::endgroup::"
 
-      - name: 🎉 crates.io publish successful
+      - name: crates.io publish successful
         run: echo "✨ Successfully published to crates.io"
 
   create-release:
-    name: 🚀 Create GitHub Release
+    name: Create GitHub Release
     if: startsWith(github.ref, 'refs/tags/')
     needs: [build-artifacts, build-packages, cargo-publish]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 📥 Download all artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts
 
-      - name: 🔨 Prepare release assets
+      - name: Prepare release assets
         run: |
           echo "::group::Preparing release assets"
           mkdir -p release-assets
@@ -299,7 +293,7 @@ jobs:
           ls -la ./release-assets
           echo "::endgroup::"
 
-      - name: 📝 Generate release notes with gitai
+      - name: Generate release notes with gitai
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -328,7 +322,7 @@ jobs:
           cat RELEASE_NOTES.md
           echo "::endgroup::"
 
-      - name: 🚀 Create GitHub Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}

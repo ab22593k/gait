@@ -156,6 +156,15 @@ codegen-units = 1
 panic = "abort"
 strip = true
 
+[package.metadata.deb]
+name = "gitai"
+depends = "git"
+maintainer = "Your Name <your.email@example.com>"
+copyright = "2024, Your Name"
+license-file = ["LICENSE.md"]
+extended-description = "AI-powered toolkit that enhances Git workflow"
+section = "devel"
+
 [profile.dev]
 opt-level = 0
 debug = true
