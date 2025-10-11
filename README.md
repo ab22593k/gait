@@ -26,11 +26,17 @@ cargo build --release
 
 gitai uses Git config to store settings. Configure your LLM provider:
 
+# To configure your default LLM provider globally, use the following commands.
+
+# Replace 'google' with your chosen provider and provide the necessary credentials and model.
+
 ```bash
-# Set --global/local provider (e.g., Google Gemini)
 git config --global gitai.defaultprovider google
 git config --global gitai.google-apikey "your-api-key"
 git config --global gitai.google-model "gemini-1.5-pro"
+
+# For project-specific settings, omit the --global flag to apply configurations locally.
+# Example: git config gitai.defaultprovider openai
 ```
 
 Supported providers: `openai`, `anthropic`, `google`, `cohere`, `groq`, `ollama`, etc.
@@ -64,16 +70,12 @@ git changelog --version 1.2.0 --detail-level standard
 # Generate release notes
 git release-notes --version 1.2.0
 ```
-### Managing Configuration
-
 
 ### Other Commands
 
-```bash
-# Serve as MCP server
-git serve
-
 # Wire operations (caching, syncing)
+
+```bash
 git wire
 ```
 

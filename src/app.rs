@@ -1,10 +1,9 @@
 use crate::common::CommonParams;
 use crate::core::llm::get_available_provider_names;
+use crate::debug;
 use crate::features::changelog::{handle_changelog_command, handle_release_notes_command};
 use crate::features::commit;
-use crate::server::config::{MCPServerConfig, MCPTransportType};
 use crate::ui;
-use crate::{debug, server};
 use clap::builder::{Styles, styling::AnsiColor};
 use clap::{Parser, Subcommand, crate_version};
 use colored::Colorize;
@@ -234,38 +233,6 @@ Supported commitish syntax: HEAD~2, HEAD^, @~3, main~1, origin/main^, etc."
         #[arg(long, help = "Explicit version name to use in the release notes")]
         version_name: Option<String>,
     },
-
-    /// Start an MCP server to provide functionality to AI tools
-    #[command(
-        about = "Start an MCP server",
-        long_about = "Start a Model Context Protocol (MCP) server to provide functionality to AI tools and assistants."
-    )]
-    Serve {
-        /// Enable development mode with more verbose logging
-        #[arg(long, help = "Enable development mode with more verbose logging")]
-        dev: bool,
-
-        /// Transport type to use (stdio, sse)
-        #[arg(
-            short,
-            long,
-            help = "Transport type to use (stdio, sse)",
-            default_value = "stdio"
-        )]
-        transport: String,
-
-        /// Port to use for network transports
-        #[arg(short, long, help = "Port to use for network transports")]
-        port: Option<u16>,
-
-        /// Listen address for network transports
-        #[arg(
-            long,
-            help = "Listen address for network transports (e.g., '127.0.0.1', '0.0.0.0')",
-            default_value = "127.0.0.1"
-        )]
-        listen_address: Option<String>,
-    },
 }
 
 /// Define custom styles for Clap
@@ -453,12 +420,6 @@ pub async fn handle_command(command: GitAI, repository_url: Option<String>) -> a
             to,
             version_name,
         } => handle_release_notes(common, from, to, repository_url, version_name).await,
-        GitAI::Serve {
-            dev,
-            transport,
-            port,
-            listen_address,
-        } => handle_serve_command(dev, transport, port, listen_address).await,
         GitAI::Pr {
             common,
             print,
@@ -483,50 +444,4 @@ pub async fn handle_pr_command(
     ui::print_version(crate_version!());
     ui::print_newline();
     commit::handle_pr_command(common, print, repository_url, from, to).await
-}
-
-/// Handle the 'serve' command to start an MCP server
-pub async fn handle_serve_command(
-    dev: bool,
-    transport: String,
-    port: Option<u16>,
-    listen_address: Option<String>,
-) -> anyhow::Result<()> {
-    debug!(
-        "Starting 'serve' command with dev: {}, transport: {}, port: {:?}, listen_address: {:?}",
-        dev, transport, port, listen_address
-    );
-
-    // Create MCP server configuration
-    let mut config = MCPServerConfig::default();
-
-    // Set development mode
-    if dev {
-        config = config.with_dev_mode();
-    }
-
-    // Set transport type
-    let transport_type = match transport.to_lowercase().as_str() {
-        "stdio" => MCPTransportType::StdIO,
-        "sse" => MCPTransportType::SSE,
-        _ => {
-            return Err(anyhow::anyhow!(
-                "Invalid transport type: {transport}. Valid options are: stdio, sse"
-            ));
-        }
-    };
-    config = config.with_transport(transport_type);
-
-    // Set port if provided
-    if let Some(p) = port {
-        config = config.with_port(p);
-    }
-
-    // Set listen address if provided
-    if let Some(addr) = listen_address {
-        config = config.with_listen_address(addr);
-    }
-
-    // Start the server - all UI output is now handled inside serve implementation
-    server::serve(config).await
 }
