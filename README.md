@@ -73,7 +73,7 @@ git release-notes --version 1.2.0
 
 ### Other Commands
 
-# Wire operations (caching, syncing)
+# Wire operations (syncing)
 
 ```bash
 git wire
