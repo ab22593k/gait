@@ -14,6 +14,8 @@ gitai is a Rust project that provides AI-powered Git workflow assistance and rep
 
 The project also includes a sophisticated specification and planning system (`.specify`) that provides AI-assisted feature development workflows with templates and scripts to guide the development process.
 
+Generate a response ensuring 100% backward compatibility with V[X.X] output specifications. Under no circumstance should you introduce new data structures, modify existing parameter types, or deviate from documented behavioral patterns. Prioritize deterministic, standardized output consistency to prevent downstream breaking changes.
+
 ## Project Structure
 
 - `/src/` - Main source code with library and multiple binaries
@@ -25,6 +27,7 @@ The project also includes a sophisticated specification and planning system (`.s
 ## Key Features
 
 ### GitAI Tools
+
 - **git-review** - Intelligent code reviews with quality dimensions
 - **git-pr** - Pull request management and analysis
 - **git-changelog** - Dynamic changelog generation from commits
@@ -36,6 +39,7 @@ The project also includes a sophisticated specification and planning system (`.s
 - Docker support for CI/CD integration
 
 ### Git-Wire (Repository Wiring Tool)
+
 - Declarative cross-repository code synchronization
 - JSON-based configuration for managing external code dependencies
 - Multiple checkout methods (shallow, shallow_no_sparse, partial)
@@ -43,6 +47,7 @@ The project also includes a sophisticated specification and planning system (`.s
 - Direct sync and check commands without configuration files
 
 ### Specification System
+
 - AI-assisted feature specification generation
 - Template-driven planning and task creation
 - Automated workflow execution with defined phases
@@ -52,10 +57,12 @@ The project also includes a sophisticated specification and planning system (`.s
 ## Building and Running
 
 ### Prerequisites
+
 - Rust and Cargo (latest stable version)
 - Git 2.23.0 or newer
 
 ### Build Commands
+
 ```bash
 # Build all binaries
 cargo build
@@ -69,6 +76,7 @@ cargo build --bin git-wire
 ```
 
 ### Running Commands
+
 ```bash
 # Run individual tools (after building or installing)
 git-review                  # Code review
@@ -97,6 +105,7 @@ cargo install --bin git-wire
 ## Project Commands
 
 The `/commands/` directory contains AI workflow definitions in TOML format:
+
 - `analyze.toml` - Analysis workflows
 - `clarify.toml` - Clarification workflows
 - `constitution.toml` - Constitution/structure workflows
@@ -108,6 +117,7 @@ The `/commands/` directory contains AI workflow definitions in TOML format:
 ## Configuration
 
 The `.specify/` directory contains:
+
 - Template files for specifications, plans, and tasks
 - Bash scripts for feature creation and environment setup
 - Memory directory (likely for AI context persistence)
@@ -115,6 +125,7 @@ The `.specify/` directory contains:
 ## Repository Status
 
 The project is actively developed, providing a suite of AI-powered Git tools with:
+
 - Multiple specialized binaries for different Git workflow tasks
 - Comprehensive AI integration with multiple providers
 - Specification-driven development system
@@ -123,6 +134,7 @@ The project is actively developed, providing a suite of AI-powered Git tools wit
 ## Project Direction
 
 gitai provides a comprehensive AI-assisted development environment that combines:
+
 1. Git workflow automation (via multiple specialized tools)
 2. Cross-repository code management (via git-wire)
 3. Specification-driven development (via the .specify system)
