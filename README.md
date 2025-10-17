@@ -36,6 +36,8 @@ These rules provide a concise framework for building lightweight Rust code. Focu
 
 - Profile for PerformanceUse cargo flamegraph or perf; optimize hot paths with #[inline]. Benchmark with criterion.
 
+- Use the git2 crate for core version control domain logic.
+
 ## License
 
 Licensed under the MIT License. See [LICENSE.md](LICENSE.md) for details.
