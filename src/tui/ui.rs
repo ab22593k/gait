@@ -47,7 +47,7 @@ fn render_sections(f: &mut Frame, state: &mut TuiState, chunks: &[Rect]) {
     let mut chunk_index = 0;
 
     if state.nav_bar_visible {
-        draw_nav_bar(f, chunks[chunk_index]);
+        draw_nav_bar(f, state, chunks[chunk_index]);
         chunk_index += 1;
     }
 
@@ -62,14 +62,25 @@ fn render_sections(f: &mut Frame, state: &mut TuiState, chunks: &[Rect]) {
     draw_status(f, state, chunks[chunk_index]);
 }
 
-fn draw_nav_bar(f: &mut Frame, area: Rect) {
-    let nav_items = [
-        ("↔", "Navigate"),
-        ("E", "Message"),
-        ("I", "Instructions"),
-        ("R", "Regenerate"),
-        ("⏎", "Commit"),
-    ];
+fn draw_nav_bar(f: &mut Frame, state: &TuiState, area: Rect) {
+    let nav_items: Vec<(&str, &str)> = match state.mode {
+        Mode::RebaseList => vec![
+            ("↑↓", "Navigate"),
+            ("⏎", "Edit"),
+            ("␣", "Action"),
+            ("Esc", "Exit"),
+        ],
+        Mode::RebaseEdit => vec![
+            ("Esc", "Save"),
+        ],
+        _ => vec![
+            ("↔", "Navigate"),
+            ("E", "Message"),
+            ("I", "Instructions"),
+            ("R", "Regenerate"),
+            ("⏎", "Commit"),
+        ],
+    };
 
     let nav_spans = nav_items
         .iter()
@@ -98,28 +109,34 @@ fn draw_nav_bar(f: &mut Frame, area: Rect) {
 }
 
 fn draw_commit_message(f: &mut Frame, state: &mut TuiState, area: Rect) {
-    let title = format!(
-        "✦ Commit Message ({}/{})",
-        state.current_index + 1,
-        state.messages.len()
-    );
+    match state.mode {
+        Mode::RebaseList => draw_rebase_list(f, state, area),
+        Mode::RebaseEdit => draw_rebase_edit(f, state, area),
+        _ => {
+            let title = format!(
+                "✦ Commit Message ({}/{})",
+                state.current_index + 1,
+                state.messages.len()
+            );
 
-    let message_block = Block::default()
-        .title(Span::styled(
-            title,
-            Style::default()
-                .fg(ACCENT_COLOR)
-                .add_modifier(Modifier::BOLD),
-        ))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(BORDER_COLOR));
+            let message_block = Block::default()
+                .title(Span::styled(
+                    title,
+                    Style::default()
+                        .fg(ACCENT_COLOR)
+                        .add_modifier(Modifier::BOLD),
+                ))
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(BORDER_COLOR));
 
-    if state.mode == Mode::EditingMessage {
-        state.message_textarea.set_block(message_block);
-        state.message_textarea.set_style(Style::default());
-        f.render_widget(&state.message_textarea, area);
-    } else {
-        render_commit_message_content(f, state, message_block, area);
+            if state.mode == Mode::EditingMessage {
+                state.message_textarea.set_block(message_block);
+                state.message_textarea.set_style(Style::default());
+                f.render_widget(&state.message_textarea, area);
+            } else {
+                render_commit_message_content(f, state, message_block, area);
+            }
+        }
     }
 }
 
@@ -201,6 +218,73 @@ fn create_centered_status_line(
         Span::styled(content, Style::default().fg(color)),
         Span::raw(" ".repeat(right_padding)),
     ])
+}
+
+fn draw_rebase_list(f: &mut Frame, state: &mut TuiState, area: Rect) {
+    let title = format!(
+        "🔄 Rebase Commits ({}/{})",
+        state.rebase_current_index + 1,
+        state.rebase_commits.len()
+    );
+
+    let list_block = Block::default()
+        .title(Span::styled(
+            title,
+            Style::default()
+                .fg(ACCENT_COLOR)
+                .add_modifier(Modifier::BOLD),
+        ))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(BORDER_COLOR));
+
+    let mut lines = vec![];
+    for (i, commit) in state.rebase_commits.iter().enumerate() {
+        let is_selected = i == state.rebase_current_index;
+        let prefix = if is_selected { "▶ " } else { "  " };
+        let action = format!("{:6}", commit.suggested_action.to_string());
+        let hash = &commit.hash[..8];
+        let message = commit.message.lines().next().unwrap_or("");
+
+        let style = if is_selected {
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+
+        lines.push(Line::from(vec![
+            Span::styled(prefix, style),
+            Span::styled(action, Style::default().fg(Color::Cyan)),
+            Span::raw(" "),
+            Span::styled(hash, Style::default().fg(Color::DarkGray)),
+            Span::raw(" "),
+            Span::styled(message, style),
+        ]));
+    }
+
+    let list = Paragraph::new(lines)
+        .block(list_block)
+        .style(Style::default())
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(list, area);
+}
+
+fn draw_rebase_edit(f: &mut Frame, state: &mut TuiState, area: Rect) {
+    let title = "✏️  Edit Commit Message".to_string();
+
+    let edit_block = Block::default()
+        .title(Span::styled(
+            title,
+            Style::default()
+                .fg(ACCENT_COLOR)
+                .add_modifier(Modifier::BOLD),
+        ))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(BORDER_COLOR));
+
+    state.rebase_textarea.set_block(edit_block);
+    state.rebase_textarea.set_style(Style::default());
+    f.render_widget(&state.rebase_textarea, area);
 }
 
 fn calculate_padding(terminal_width: usize, content_width: usize) -> (usize, usize) {

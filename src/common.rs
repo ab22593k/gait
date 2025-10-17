@@ -45,17 +45,6 @@ pub struct CommonParams {
     #[arg(short, long, help = "Custom instructions for this operation")]
     pub instructions: Option<String>,
 
-    /// Select an instruction preset
-    #[arg(
-        long,
-        help = "Select an instruction preset (use 'git presets' to see available presets for commits and reviews)"
-    )]
-    pub preset: Option<String>,
-
-    /// Enable or disable emoji
-    #[arg(long, help = "Enable or disable emoji")]
-    pub emoji: Option<bool>,
-
     /// Set the detail level
     #[arg(
         long,
@@ -83,6 +72,8 @@ impl CommonParams {
                 "anthropic".to_string()
             } else if provider.to_lowercase() == "openrouter" {
                 "openrouter".to_string()
+            } else if provider.to_lowercase() == "google" {
+                "google".to_string()
             } else {
                 provider.clone()
             };

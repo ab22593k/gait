@@ -6,8 +6,11 @@
 mod app;
 mod input_handler;
 pub mod spinner;
+mod rebase;
 mod state;
 mod ui;
 
 pub use app::TuiCommit;
 pub use app::run_tui_commit;
+pub use rebase::TuiRebase;
+pub use rebase::run_tui_rebase;

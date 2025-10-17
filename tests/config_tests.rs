@@ -116,8 +116,6 @@ fn test_project_config_security() {
     let common = CommonParams {
         provider: Some("openai".to_string()),
         instructions: Some("Test instructions".to_string()),
-        preset: Some("default".to_string()),
-        emoji: Some(true),
         detail_level: "standard".to_string(),
         repository_url: None,
     };

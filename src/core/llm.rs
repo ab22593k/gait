@@ -47,7 +47,7 @@ static PROVIDER_DEFAULTS: std::sync::LazyLock<HashMap<&'static str, ProviderDefa
         map.insert(
             "google",
             ProviderDefault {
-                model: "gemini-2.5-pro-preview-06-05",
+                model: "gemini-2.5-flash-lite",
                 token_limit: 1_000_000,
             },
         );

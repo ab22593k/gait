@@ -10,6 +10,7 @@ use crate::common::CommonParams;
 use crate::config::Config;
 use crate::debug;
 use crate::git::GitRepo;
+use crate::tui::run_tui_rebase;
 use crate::ui;
 
 use anyhow::Result;
@@ -21,6 +22,7 @@ pub async fn handle_rebase_command(
     upstream: String,
     branch: Option<String>,
     auto_apply: bool,
+    interactive: bool,
     commit_types: Option<String>,
     repository_url: Option<String>,
 ) -> Result<()> {
@@ -35,35 +37,50 @@ pub async fn handle_rebase_command(
     // Create the service
     let service = create_rebase_service(&common, repository_url, &config)?;
 
+    println!("!!!!!!!!!!!!!!!!!!");
     // Analyze commits for rebase
-    let analysis = service.analyze_commits_for_rebase(&upstream, branch.as_deref()).await?;
+    let analysis = service
+        .analyze_commits_for_rebase(&upstream, branch.as_deref())
+        .await?;
 
     if analysis.commits.is_empty() {
         ui::print_info("No commits to rebase. Branch is already up to date.");
         return Ok(());
     }
 
-    ui::print_info(&format!("Found {} commits to rebase", analysis.commits.len()));
+    ui::print_info(&format!(
+        "Found {} commits to rebase",
+        analysis.commits.len()
+    ));
 
     if auto_apply {
         // Auto-apply AI suggestions
         ui::print_info("Auto-applying AI suggestions...");
         let result = service.perform_rebase_auto(analysis).await?;
-        ui::print_success(&format!("Rebase completed successfully with {} operations", result.operations_performed));
+        ui::print_success(&format!(
+            "Rebase completed successfully with {} operations",
+            result.operations_performed
+        ));
+    } else if interactive {
+        // Launch interactive TUI
+        ui::print_info("Launching interactive rebase TUI...");
+        run_tui_rebase(analysis, service).await?;
     } else {
-        // Interactive mode - for now, just show what would be done
-        ui::print_warning("Interactive rebase mode is not yet implemented.");
+        // Show suggestions
         ui::print_info("Showing AI suggestions:");
 
         for (i, commit) in analysis.commits.iter().enumerate() {
-            ui::print_info(&format!("{}. {} - Suggested: {:?}",
+            ui::print_info(&format!(
+                "{}. {} - Suggested: {:?}",
                 i + 1,
                 &commit.message.lines().next().unwrap_or(""),
                 commit.suggested_action
             ));
         }
 
-        ui::print_info("Use --auto-apply to automatically apply these suggestions.");
+        ui::print_info(
+            "Use --auto-apply to automatically apply these suggestions, or --interactive to launch the TUI.",
+        );
     }
 
     Ok(())
@@ -81,10 +98,7 @@ fn create_rebase_service(
     // Create the git repository
     let git_repo = GitRepo::new_from_url(repo_url)?;
 
-    let service = Arc::new(RebaseService::new(
-        config.clone(),
-        git_repo,
-    )?);
+    let service = Arc::new(RebaseService::new(config.clone(), git_repo)?);
 
     // Check environment prerequisites
     service.check_environment()?;

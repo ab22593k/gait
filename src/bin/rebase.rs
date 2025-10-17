@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use gitai::{app, common::CommonParams, logger};
+use log::debug;
 
 #[derive(Parser)]
 #[command(name = "git-rebase", about = "Interactive rebase with AI assistance")]
@@ -19,6 +20,10 @@ struct RebaseArgs {
     /// Auto-apply AI suggestions without interactive prompt
     #[arg(long, help = "Auto-apply AI suggestions without interactive prompt")]
     auto_apply: bool,
+
+    /// Launch interactive TUI for rebase operations
+    #[arg(long, help = "Launch interactive TUI for rebase operations")]
+    interactive: bool,
 
     /// Focus on specific commit types (feat, fix, refactor, etc.)
     #[arg(
@@ -40,6 +45,7 @@ async fn main() -> Result<()> {
         args.upstream,
         args.branch,
         args.auto_apply,
+        args.interactive,
         args.commit_types,
         repository_url,
     )

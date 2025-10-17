@@ -58,7 +58,7 @@ impl Config {
     /// Load configuration from git config
     fn load_from_config(prefix: &str) -> Self {
         let default_provider = Self::get_git_config_value(&format!("{prefix}.defaultprovider"))
-            .unwrap_or_else(|| "openai".to_string());
+            .expect("Failed to get default provider from git config. Please set 'gitai.defaultprovider' e.g. `git config --global gitai.defaultprovider openai`");
         let instructions =
             Self::get_git_config_value(&format!("{prefix}.instructions")).unwrap_or_default();
 

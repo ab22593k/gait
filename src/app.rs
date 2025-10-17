@@ -101,7 +101,10 @@ pub enum GitAI {
         no_verify: bool,
 
         /// Amend the last commit or a specific commit with a new AI-generated message
-        #[arg(long, help = "Amend the last commit or a specific commit with a new AI-generated message")]
+        #[arg(
+            long,
+            help = "Amend the last commit or a specific commit with a new AI-generated message"
+        )]
         amend: bool,
 
         /// Specific commit to amend (hash, branch, or reference). Defaults to HEAD when --amend is used
@@ -280,6 +283,10 @@ Supported actions:\\
         #[arg(long, help = "Auto-apply AI suggestions without interactive prompt")]
         auto_apply: bool,
 
+        /// Launch interactive TUI for rebase operations
+        #[arg(short, long, help = "Launch interactive TUI for rebase operations")]
+        interactive: bool,
+
         /// Focus on specific commit types (feat, fix, refactor, etc.)
         #[arg(
             long,
@@ -342,7 +349,13 @@ pub async fn handle_message(
 ) -> anyhow::Result<()> {
     debug!(
         "Handling 'message' command with common: {:?}, auto_commit: {}, use_emoji: {}, print: {}, verify: {}, amend: {}, commit_ref: {:?}",
-        common, config.auto_commit, config.use_emoji, config.print_only, config.verify, config.amend, config.commit_ref
+        common,
+        config.auto_commit,
+        config.use_emoji,
+        config.print_only,
+        config.verify,
+        config.amend,
+        config.commit_ref
     );
 
     ui::print_version(crate_version!());
@@ -491,8 +504,20 @@ pub async fn handle_command(command: GitAI, repository_url: Option<String>) -> a
             upstream,
             branch,
             auto_apply,
+            interactive,
             commit_types,
-        } => handle_rebase_command(common, upstream, branch, auto_apply, commit_types, repository_url).await,
+        } => {
+            handle_rebase_command(
+                common,
+                upstream,
+                branch,
+                auto_apply,
+                interactive,
+                commit_types,
+                repository_url,
+            )
+            .await
+        }
     }
 }
 
@@ -519,6 +544,7 @@ pub async fn handle_rebase_command(
     upstream: String,
     branch: Option<String>,
     auto_apply: bool,
+    interactive: bool,
     commit_types: Option<String>,
     repository_url: Option<String>,
 ) -> anyhow::Result<()> {
@@ -526,8 +552,15 @@ pub async fn handle_rebase_command(
         "Handling 'rebase' command with common: {:?}, upstream: {}, branch: {:?}, auto_apply: {}, commit_types: {:?}",
         common, upstream, branch, auto_apply, commit_types
     );
-    ui::print_version(crate_version!());
-    ui::print_newline();
 
-    rebase::handle_rebase_command(common, upstream, branch, auto_apply, commit_types, repository_url).await
+    rebase::handle_rebase_command(
+        common,
+        upstream,
+        branch,
+        auto_apply,
+        interactive,
+        commit_types,
+        repository_url,
+    )
+    .await
 }
