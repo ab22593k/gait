@@ -1,5 +1,4 @@
 use crate::core::messages::{ColoredMessage, get_waiting_message};
-
 use ratatui::style::Color;
 use unicode_width::UnicodeWidthStr;
 
@@ -22,6 +21,18 @@ impl SpinnerState {
             frames: vec!["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
             current_frame: 0,
             message: get_waiting_message().clone(),
+        }
+    }
+
+    // Create spinner with custom message
+    pub fn with_message(message: &str) -> Self {
+        Self {
+            frames: vec!["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+            current_frame: 0,
+            message: ColoredMessage {
+                text: message.to_string(),
+                color: Color::Cyan, // Default color for custom messages
+            },
         }
     }
 

@@ -1,11 +1,11 @@
+use super::relevance::RelevanceScorer;
 use super::review::{GeneratedReview, QualityDimension};
 use super::types::GeneratedMessage;
 use crate::common::get_combined_instructions;
 use crate::config::Config;
 use crate::core::context::{ChangeType, CommitContext, ProjectMetadata, RecentCommit, StagedFile};
-
-use super::relevance::RelevanceScorer;
 use crate::debug;
+
 use std::collections::HashMap;
 use std::fmt::Write;
 

@@ -183,7 +183,7 @@ impl TuiCommit {
     }
 
     pub fn perform_commit(&self, message: &str) -> Result<ExitStatus, Error> {
-        match self.service.perform_commit(message) {
+        match self.service.perform_commit(message, false, None) {
             Ok(result) => {
                 let output = format_commit_result(&result, message);
                 Ok(ExitStatus::Committed(output))

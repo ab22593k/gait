@@ -28,6 +28,116 @@ pub struct CommitInfo {
 ///
 /// # Arguments
 ///
+/// Amend a commit with a new message
+///
+/// # Arguments
+///
+/// * `repo` - The git repository
+/// * `message` - The new commit message
+/// * `commit_ref` - The commit reference to amend (currently only "HEAD" is supported)
+/// * `is_remote` - Whether the repository is remote
+///
+/// # Returns
+///
+/// A Result containing the `CommitResult` or an error
+pub fn amend_commit(repo: &Repository, message: &str, commit_ref: &str, is_remote: bool) -> Result<CommitResult> {
+    if is_remote {
+        return Err(anyhow!(
+            "Cannot amend commits in a remote repository in read-only mode"
+        ));
+    }
+
+    // For now, only support amending HEAD
+    if commit_ref != "HEAD" {
+        return Err(anyhow!("Only amending HEAD is currently supported"));
+    }
+
+    // Get the current HEAD commit
+    let head_commit = repo.head()?.peel_to_commit()?;
+
+    // Get the signature for the new commit
+    let signature = repo.signature()?;
+
+    // Use the HEAD commit's tree (or current index if there are staged changes)
+    let tree = if repo.statuses(None)?.iter().any(|s| s.status() != git2::Status::CURRENT) {
+        // There are staged changes, use current index
+        let mut index = repo.index()?;
+        let tree_id = index.write_tree()?;
+        repo.find_tree(tree_id)?
+    } else {
+        // No staged changes, use the HEAD commit's tree
+        head_commit.tree()?
+    };
+
+    // Get all parents of the HEAD commit
+    let parents: Vec<git2::Commit> = head_commit.parents().collect();
+    let parent_refs: Vec<&git2::Commit> = parents.iter().collect();
+
+    // Create new commit with same parents but new message
+    let commit_oid = repo.commit(
+        None, // Don't update any reference automatically
+        &signature,
+        &signature,
+        message,
+        &tree,
+        &parent_refs,
+    )?;
+
+    // Manually update HEAD to point to the new commit
+    repo.head()?.set_target(commit_oid, "amend commit message")?;
+    
+
+    let branch_name = repo.head()?.shorthand().unwrap_or("HEAD").to_string();
+    let commit = repo.find_commit(commit_oid)?;
+    let short_hash = commit.id().to_string()[..7].to_string();
+
+    let mut files_changed = 0;
+    let mut insertions = 0;
+    let mut deletions = 0;
+    let mut new_files = Vec::new();
+
+    // Calculate diff stats compared to the HEAD commit's parent (or empty tree if no parent)
+    let diff = if let Some(parent) = head_commit.parent(0).ok() {
+        repo.diff_tree_to_tree(Some(&parent.tree()?), Some(&tree), None)?
+    } else {
+        // Initial commit, compare to empty tree
+        let empty_tree = repo.treebuilder(None)?.write()?;
+        let empty_tree = repo.find_tree(empty_tree)?;
+        repo.diff_tree_to_tree(Some(&empty_tree), Some(&tree), None)?
+    };
+
+    diff.print(git2::DiffFormat::NameStatus, |_, _, line| {
+        files_changed += 1;
+        if line.origin() == '+' {
+            insertions += 1;
+        } else if line.origin() == '-' {
+            deletions += 1;
+        }
+        true
+    })?;
+
+    let statuses = repo.statuses(None)?;
+
+    for entry in statuses.iter() {
+        if entry.status().contains(git2::Status::INDEX_NEW) {
+            if let Some(path) = entry.path() {
+                let mode = entry.index_to_workdir().map(|d| d.new_file().mode())
+                    .unwrap_or(git2::FileMode::Blob);
+                new_files.push((path.to_string(), mode));
+            }
+        }
+    }
+
+    Ok(CommitResult {
+        branch: branch_name,
+        commit_hash: short_hash,
+        files_changed,
+        insertions,
+        deletions,
+        new_files,
+    })
+}
+
 /// * `repo` - The git repository
 /// * `message` - The commit message.
 /// * `is_remote` - Whether the repository is remote.

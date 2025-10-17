@@ -1,10 +1,11 @@
 use colored::Colorize;
 use console::Term;
-use indicatif::{ProgressBar, ProgressStyle};
 use parking_lot::Mutex;
 use ratatui::style::Color;
-use std::fmt::Write;
-use std::time::Duration;
+use std::fmt::Write as _;
+
+// Re-export SpinnerState for TUI use
+pub use crate::tui::spinner::SpinnerState;
 
 pub const STARLIGHT: Color = Color::Rgb(255, 255, 240);
 pub const NEBULA_PURPLE: Color = Color::Rgb(167, 132, 239);
@@ -22,34 +23,22 @@ static QUIET_MODE: std::sync::LazyLock<Mutex<bool>> =
     std::sync::LazyLock::new(|| Mutex::new(false));
 
 /// Enable or disable quiet mode
+#[inline]
 pub fn set_quiet_mode(enabled: bool) {
-    let mut quiet_mode = QUIET_MODE.lock();
-    *quiet_mode = enabled;
+    *QUIET_MODE.lock() = enabled;
 }
 
 /// Check if quiet mode is enabled
+#[inline]
 pub fn is_quiet_mode() -> bool {
     *QUIET_MODE.lock()
 }
 
-pub fn create_spinner(message: &str) -> ProgressBar {
-    // Don't create a spinner in quiet mode
-    if is_quiet_mode() {
-        return ProgressBar::hidden();
-    }
-
-    let pb = ProgressBar::new_spinner();
-    let Ok(style) = ProgressStyle::default_spinner()
-        .tick_chars("✦✧✶✷✸✹✺✻✼✽")
-        .template("{spinner} {msg}")
-    else {
-        return ProgressBar::hidden();
-    };
-
-    pb.set_style(style);
-    pb.set_message(message.to_string());
-    pb.enable_steady_tick(Duration::from_millis(100));
-    pb
+/// Create a TUI spinner state for terminal user interface
+#[inline]
+#[must_use]
+pub fn create_tui_spinner(message: &str) -> SpinnerState {
+    SpinnerState::with_message(message)
 }
 
 pub fn print_info(message: &str) {
@@ -79,7 +68,7 @@ pub fn print_version(version: &str) {
     if !is_quiet_mode() {
         println!(
             "{} {} {}",
-            "🔮 Pilot".magenta().bold(),
+            "Smart Workflow".magenta().bold(),
             "version".cyan(),
             version.green()
         );
@@ -89,9 +78,10 @@ pub fn print_version(version: &str) {
 /// Print content with decorative borders
 pub fn print_bordered_content(content: &str) {
     if !is_quiet_mode() {
-        println!("{}", "━".repeat(50).bright_purple());
+        let border = "━".repeat(50).bright_purple();
+        println!("{border}");
         println!("{content}");
-        println!("{}", "━".repeat(50).bright_purple());
+        println!("{border}");
     }
 }
 
@@ -109,8 +99,9 @@ pub fn print_newline() {
     }
 }
 
+#[must_use]
 pub fn create_gradient_text(text: &str) -> String {
-    let gradient = vec![
+    const GRADIENT: &[(u8, u8, u8)] = &[
         (129, 0, 255), // Deep purple
         (134, 51, 255),
         (139, 102, 255),
@@ -118,11 +109,12 @@ pub fn create_gradient_text(text: &str) -> String {
         (149, 204, 255), // Light cyan
     ];
 
-    apply_gradient(text, &gradient)
+    apply_gradient(text, GRADIENT)
 }
 
+#[must_use]
 pub fn create_secondary_gradient_text(text: &str) -> String {
-    let gradient = vec![
+    const GRADIENT: &[(u8, u8, u8)] = &[
         (75, 0, 130),   // Indigo
         (106, 90, 205), // Slate blue
         (138, 43, 226), // Blue violet
@@ -130,19 +122,20 @@ pub fn create_secondary_gradient_text(text: &str) -> String {
         (153, 50, 204), // Dark orchid
     ];
 
-    apply_gradient(text, &gradient)
+    apply_gradient(text, GRADIENT)
 }
 
+#[must_use]
 fn apply_gradient(text: &str, gradient: &[(u8, u8, u8)]) -> String {
     let chars: Vec<char> = text.chars().collect();
+
+    if chars.is_empty() || gradient.is_empty() {
+        return String::new();
+    }
+
     let chars_len = chars.len();
     let gradient_len = gradient.len();
-
-    let mut result = String::new();
-
-    if chars_len == 0 || gradient_len == 0 {
-        return result;
-    }
+    let mut result = String::with_capacity(text.len() * 20); // Reserve space for ANSI codes
 
     for (i, &c) in chars.iter().enumerate() {
         let index = if chars_len == 1 {
@@ -167,10 +160,12 @@ pub fn write_gradient_text(
 }
 
 pub fn write_colored_text(term: &Term, text: &str, color: (u8, u8, u8)) -> std::io::Result<()> {
-    let colored_text = text.truecolor(color.0, color.1, color.2);
+    let (r, g, b) = color;
+    let colored_text = text.truecolor(r, g, b);
     term.write_line(&colored_text)
 }
 
 pub fn write_bold_text(term: &Term, text: &str) -> std::io::Result<()> {
-    term.write_line(&text.bold())
+    let bold_text = text.bold();
+    term.write_line(&bold_text)
 }

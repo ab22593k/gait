@@ -3,7 +3,7 @@ use crate::common::CommonParams;
 use crate::config::Config;
 use crate::core::messages;
 use crate::git::GitRepo;
-use crate::ui;
+use crate::ui::{self};
 
 use anyhow::{Context, Result};
 use colored::Colorize;
@@ -636,15 +636,14 @@ async fn generate_review_based_on_parameters(
         .unwrap_or_else(|| config.instructions.clone());
 
     // Create and start the spinner
-    let spinner = ui::create_spinner("");
+    let mut spinner = ui::create_tui_spinner("");
     let random_message = messages::get_review_waiting_message();
-    spinner.set_message(random_message.text.to_string());
+    ui::create_tui_spinner(&random_message.text).tick();
 
     let review = if let (Some(from_branch), Some(to_branch)) = (from.as_ref(), to.as_ref()) {
         // Branch comparison review
         generate_branch_comparison_review(
             &service,
-            &spinner,
             random_message,
             &effective_instructions,
             from_branch,
@@ -656,7 +655,6 @@ async fn generate_review_based_on_parameters(
         let from_branch = "main";
         generate_branch_comparison_review(
             &service,
-            &spinner,
             random_message,
             &effective_instructions,
             from_branch,
@@ -667,7 +665,6 @@ async fn generate_review_based_on_parameters(
         // Generate review for specific commit
         generate_commit_review(
             &service,
-            &spinner,
             random_message,
             &effective_instructions,
             &commit_id,
@@ -677,7 +674,6 @@ async fn generate_review_based_on_parameters(
         // Generate review for staged/unstaged changes
         generate_working_directory_review(
             &service,
-            &spinner,
             random_message,
             &effective_instructions,
             include_unstaged,
@@ -686,7 +682,7 @@ async fn generate_review_based_on_parameters(
     };
 
     // Stop the spinner
-    spinner.finish_and_clear();
+    spinner.tick();
 
     Ok(review)
 }
@@ -694,16 +690,19 @@ async fn generate_review_based_on_parameters(
 /// Generates a review for branch comparison
 async fn generate_branch_comparison_review(
     service: &Arc<CommitService>,
-    spinner: &indicatif::ProgressBar,
     random_message: &messages::ColoredMessage,
     effective_instructions: &str,
     from_branch: &str,
     to_branch: &str,
 ) -> Result<GeneratedReview> {
-    spinner.set_message(format!(
-        "{} - Comparing {} -> {}",
-        random_message.text, from_branch, to_branch
-    ));
+    ui::create_tui_spinner(
+        format!(
+            "{} - Comparing {} -> {}",
+            random_message.text, from_branch, to_branch
+        )
+        .as_str(),
+    )
+    .tick();
 
     service
         .generate_review_for_branch_diff(effective_instructions, from_branch, to_branch)
@@ -713,15 +712,14 @@ async fn generate_branch_comparison_review(
 /// Generates a review for a specific commit
 async fn generate_commit_review(
     service: &Arc<CommitService>,
-    spinner: &indicatif::ProgressBar,
     random_message: &messages::ColoredMessage,
     effective_instructions: &str,
     commit_id: &str,
 ) -> Result<GeneratedReview> {
-    spinner.set_message(format!(
-        "{} - Reviewing commit: {}",
-        random_message.text, commit_id
-    ));
+    ui::create_tui_spinner(
+        format!("{} - Reviewing commit: {}", random_message.text, commit_id).as_str(),
+    )
+    .tick();
 
     service
         .generate_review_for_commit(effective_instructions, commit_id)
@@ -731,22 +729,20 @@ async fn generate_commit_review(
 /// Generates a review for working directory changes (staged/unstaged)
 async fn generate_working_directory_review(
     service: &Arc<CommitService>,
-    spinner: &indicatif::ProgressBar,
     random_message: &messages::ColoredMessage,
     effective_instructions: &str,
     include_unstaged: bool,
 ) -> Result<GeneratedReview> {
-    if include_unstaged {
-        spinner.set_message(format!(
-            "{} - Including unstaged changes",
-            random_message.text
-        ));
+    let mut spinner = ui::create_tui_spinner(
+        format!("{} - Including unstaged changes", random_message.text).as_str(),
+    );
 
+    if include_unstaged {
         // Get the git info with unstaged changes to check if there are any changes
         let git_info = service.get_git_info_with_unstaged(include_unstaged).await?;
 
         if git_info.staged_files.is_empty() {
-            spinner.finish_and_clear();
+            spinner.tick();
             ui::print_warning("No changes found (staged or unstaged). Nothing to review.");
             return Err(anyhow::anyhow!("No changes to review"));
         }
@@ -760,7 +756,7 @@ async fn generate_working_directory_review(
         let git_info = service.get_git_info().await?;
 
         if git_info.staged_files.is_empty() {
-            spinner.finish_and_clear();
+            spinner.tick();
             ui::print_warning(
                 "No staged changes. Please stage your changes before generating a review.",
             );

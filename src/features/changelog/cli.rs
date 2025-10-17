@@ -43,7 +43,7 @@ pub async fn handle_changelog_command(
     common.apply_to_config(&mut config)?;
 
     // Create a spinner to indicate progress
-    let spinner = ui::create_spinner("Generating changelog...");
+    let mut spinner = ui::create_tui_spinner("Generating changelog...");
 
     // Ensure we're in a git repository
     if let Err(e) = config.check_environment() {
@@ -82,7 +82,7 @@ pub async fn handle_changelog_command(
         ChangelogGenerator::generate(git_repo, &from, &to, &config, detail_level).await?;
 
     // Clear the spinner and display the result
-    spinner.finish_and_clear();
+    spinner.tick();
 
     // Output the changelog with decorative borders
     ui::print_bordered_content(&changelog);
@@ -90,7 +90,8 @@ pub async fn handle_changelog_command(
     // Update the changelog file if requested
     if update_file {
         let path = changelog_path.unwrap_or_else(|| "CHANGELOG.md".to_string());
-        let update_spinner = ui::create_spinner(&format!("Updating changelog file at {path}..."));
+        let mut update_spinner =
+            ui::create_tui_spinner(&format!("Updating changelog file at {path}..."));
 
         match ChangelogGenerator::update_changelog_file(
             &changelog,
@@ -100,14 +101,14 @@ pub async fn handle_changelog_command(
             version_name,
         ) {
             Ok(()) => {
-                update_spinner.finish_and_clear();
+                update_spinner.tick();
                 ui::print_success(&format!(
                     "✨ Changelog successfully updated at {}",
                     path.bright_green()
                 ));
             }
             Err(e) => {
-                update_spinner.finish_and_clear();
+                update_spinner.tick();
                 ui::print_error(&format!("Failed to update changelog file: {e}"));
             }
         }
@@ -145,7 +146,7 @@ pub async fn handle_release_notes_command(
     common.apply_to_config(&mut config)?;
 
     // Create a spinner to indicate progress
-    let spinner = ui::create_spinner("Generating release notes...");
+    let mut spinner = ui::create_tui_spinner("Generating release notes...");
 
     // Check environment prerequisites
     if let Err(e) = config.check_environment() {
@@ -182,7 +183,7 @@ pub async fn handle_release_notes_command(
             .await?;
 
     // Clear the spinner and display the result
-    spinner.finish_and_clear();
+    spinner.tick();
 
     // Output the release notes with decorative borders
     ui::print_bordered_content(&release_notes);

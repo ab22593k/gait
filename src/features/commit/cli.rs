@@ -7,7 +7,7 @@ use crate::core::messages;
 use crate::features::commit::types;
 use crate::git::GitRepo;
 use crate::tui::run_tui_commit;
-use crate::ui;
+use crate::ui::{self, SpinnerState};
 
 use anyhow::{Context, Result};
 use std::sync::Arc;
@@ -20,6 +20,8 @@ pub async fn handle_message_command(
     print: bool,
     verify: bool,
     dry_run: bool,
+    amend: bool,
+    commit_ref: Option<String>,
     repository_url: Option<String>,
 ) -> Result<()> {
     let mut config = Config::load()?;
@@ -41,9 +43,21 @@ pub async fn handle_message_command(
         e
     })?;
 
+    // Validate amend parameters
+    if !amend && commit_ref.is_some() {
+        ui::print_error("--commit can only be used with --amend");
+        return Err(anyhow::anyhow!("--commit requires --amend"));
+    }
+
+    if amend && commit_ref.is_some() && commit_ref.as_deref() != Some("HEAD") {
+        ui::print_error("Currently, only amending HEAD is supported. For amending other commits, use interactive rebase.");
+        ui::print_info("Example: git rebase -i HEAD~3");
+        return Err(anyhow::anyhow!("Only HEAD amendments are currently supported"));
+    }
+
     let git_info = service.get_git_info().await?;
 
-    if git_info.staged_files.is_empty() && !dry_run {
+    if git_info.staged_files.is_empty() && !dry_run && !amend {
         ui::print_warning(
             "No staged changes. Please stage your changes before generating a commit message.",
         );
@@ -62,9 +76,8 @@ pub async fn handle_message_command(
         .unwrap_or_else(|| config.instructions.clone());
 
     // Create and start the spinner
-    let spinner = ui::create_spinner("");
     let random_message = messages::get_waiting_message();
-    spinner.set_message(random_message.text.clone());
+    let mut spinner = ui::create_tui_spinner(&random_message.text);
 
     // Generate an initial message
     let initial_message = if dry_run {
@@ -78,7 +91,7 @@ pub async fn handle_message_command(
     };
 
     // Stop the spinner
-    spinner.finish_and_clear();
+    spinner.tick();
 
     if print {
         println!("{}", format_commit_message(&initial_message));
@@ -96,7 +109,13 @@ pub async fn handle_message_command(
             ));
         }
 
-        match service.perform_commit(&format_commit_message(&initial_message)) {
+        if dry_run {
+            ui::print_info("Dry run mode: would amend commit with message:");
+            println!("{}", format_commit_message(&initial_message));
+            return Ok(());
+        }
+
+        match service.perform_commit(&format_commit_message(&initial_message), amend, commit_ref.as_deref()) {
             Ok(result) => {
                 let output =
                     format_commit_result(&result, &format_commit_message(&initial_message));
@@ -190,12 +209,10 @@ async fn generate_pr_based_on_parameters(
         .unwrap_or_else(|| config.instructions.clone());
 
     // Create and start the spinner
-    let spinner = ui::create_spinner("");
     let random_message = messages::get_waiting_message();
-    spinner.set_message(format!(
-        "{} - Generating PR description",
-        random_message.text
-    ));
+    let mut spinner = ui::create_tui_spinner(
+        format!("{} - Generating PR description", random_message.text).as_str(),
+    );
 
     let pr_description = match (from, to) {
         (Some(from_ref), Some(to_ref)) => {
@@ -222,7 +239,7 @@ async fn generate_pr_based_on_parameters(
     };
 
     // Stop the spinner
-    spinner.finish_and_clear();
+    spinner.tick();
 
     Ok(pr_description)
 }
@@ -237,11 +254,14 @@ async fn handle_from_and_to_parameters(
 ) -> Result<super::types::GeneratedPullRequest> {
     // Special case: if from and to are the same, treat as single commit analysis
     if from_ref == to_ref {
-        let spinner = ui::create_spinner("");
-        spinner.set_message(format!(
-            "{} - Analyzing single commit: {}",
-            random_message.text, from_ref
-        ));
+        ui::create_tui_spinner(
+            format!(
+                "{} - Analyzing single commit: {}",
+                random_message.text, from_ref
+            )
+            .as_str(),
+        )
+        .tick();
 
         service
             .generate_pr_for_commit_range(
@@ -255,22 +275,28 @@ async fn handle_from_and_to_parameters(
     {
         // Check if these look like commit hashes (7+ hex chars) or branches
         // Treat as commit range
-        let spinner = ui::create_spinner("");
-        spinner.set_message(format!(
-            "{} - Analyzing commit range: {}..{}",
-            random_message.text, from_ref, to_ref
-        ));
+        ui::create_tui_spinner(
+            format!(
+                "{} - Analyzing commit range: {}..{}",
+                random_message.text, from_ref, to_ref
+            )
+            .as_str(),
+        )
+        .tick();
 
         service
             .generate_pr_for_commit_range(effective_instructions, &from_ref, &to_ref)
             .await
     } else {
         // Treat as branch comparison
-        let spinner = ui::create_spinner("");
-        spinner.set_message(format!(
-            "{} - Comparing branches: {} -> {}",
-            random_message.text, from_ref, to_ref
-        ));
+        ui::create_tui_spinner(
+            format!(
+                "{} - Comparing branches: {} -> {}",
+                random_message.text, from_ref, to_ref
+            )
+            .as_str(),
+        )
+        .tick();
 
         service
             .generate_pr_for_branch_diff(effective_instructions, &from_ref, &to_ref)
@@ -285,35 +311,39 @@ async fn handle_to_only_parameter(
     to_ref: String,
     random_message: &messages::ColoredMessage,
 ) -> Result<super::types::GeneratedPullRequest> {
-    let spinner = ui::create_spinner("");
-
     // Check if this is a single commit hash
     if is_likely_commit_hash(&to_ref) {
         // For a single commit specified with --to, compare it against its parent
-        spinner.set_message(format!(
-            "{} - Analyzing single commit: {}",
-            random_message.text, to_ref
-        ));
+        ui::create_tui_spinner(
+            format!(
+                "{} - Analyzing single commit: {}",
+                random_message.text, to_ref
+            )
+            .as_str(),
+        )
+        .tick();
 
         service
             .generate_pr_for_commit_range(effective_instructions, &format!("{to_ref}^"), &to_ref)
             .await
     } else if is_commitish_syntax(&to_ref) {
         // For commitish like HEAD~2, compare it against its parent (single commit analysis)
-        spinner.set_message(format!(
-            "{} - Analyzing single commit: {}",
-            random_message.text, to_ref
-        ));
+        SpinnerState::with_message(
+            format!(
+                "{} - Analyzing single commit: {}",
+                random_message.text, to_ref
+            )
+            .as_str(),
+        );
 
         service
             .generate_pr_for_commit_range(effective_instructions, &format!("{to_ref}^"), &to_ref)
             .await
     } else {
         // Default from to "main" if only to is specified with a branch name
-        spinner.set_message(format!(
-            "{} - Comparing main -> {}",
-            random_message.text, to_ref
-        ));
+        SpinnerState::with_message(
+            format!("{} - Comparing main -> {}", random_message.text, to_ref).as_str(),
+        );
 
         service
             .generate_pr_for_branch_diff(effective_instructions, "main", &to_ref)
@@ -328,15 +358,17 @@ async fn handle_from_only_parameter(
     from_ref: String,
     random_message: &messages::ColoredMessage,
 ) -> Result<super::types::GeneratedPullRequest> {
-    let spinner = ui::create_spinner("");
-
     // Check if this looks like a single commit hash that we should compare against its parent
     if is_likely_commit_hash(&from_ref) {
         // For a single commit hash, compare it against its parent (commit^..commit)
-        spinner.set_message(format!(
-            "{} - Analyzing single commit: {}",
-            random_message.text, from_ref
-        ));
+        ui::create_tui_spinner(
+            format!(
+                "{} - Analyzing single commit: {}",
+                random_message.text, from_ref
+            )
+            .as_str(),
+        )
+        .tick();
 
         service
             .generate_pr_for_commit_range(
@@ -347,20 +379,28 @@ async fn handle_from_only_parameter(
             .await
     } else if is_commitish_syntax(&from_ref) {
         // For commitish like HEAD~2, compare from that point to HEAD (reviewing multiple commits)
-        spinner.set_message(format!(
-            "{} - Analyzing range: {}..HEAD",
-            random_message.text, from_ref
-        ));
+        ui::create_tui_spinner(
+            format!(
+                "{} - Analyzing range: {}..HEAD",
+                random_message.text, from_ref
+            )
+            .as_str(),
+        )
+        .tick();
 
         service
             .generate_pr_for_commit_range(effective_instructions, &from_ref, "HEAD")
             .await
     } else {
         // For a branch name, compare to HEAD
-        spinner.set_message(format!(
-            "{} - Analyzing range: {}..HEAD",
-            random_message.text, from_ref
-        ));
+        ui::create_tui_spinner(
+            format!(
+                "{} - Analyzing range: {}..HEAD",
+                random_message.text, from_ref
+            )
+            .as_str(),
+        )
+        .tick();
 
         service
             .generate_pr_for_commit_range(effective_instructions, &from_ref, "HEAD")
@@ -375,8 +415,8 @@ async fn handle_no_parameters(
     random_message: &messages::ColoredMessage,
 ) -> Result<super::types::GeneratedPullRequest> {
     // This case should be caught by validation, but provide a sensible fallback
-    let spinner = ui::create_spinner("");
-    spinner.set_message(format!("{} - Comparing main -> HEAD", random_message.text));
+    ui::create_tui_spinner(format!("{} - Comparing main -> HEAD", random_message.text).as_str())
+        .tick();
 
     service
         .generate_pr_for_branch_diff(effective_instructions, "main", "HEAD")

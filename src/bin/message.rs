@@ -33,6 +33,17 @@ struct MessageArgs {
         help = "Dry run mode: do not make real HTTP requests, for UI testing"
     )]
     dry_run: bool,
+
+    /// Amend the last commit or a specific commit with a new AI-generated message
+    #[arg(long, help = "Amend the last commit or a specific commit with a new AI-generated message")]
+    amend: bool,
+
+    /// Specific commit to amend (hash, branch, or reference). Defaults to HEAD when --amend is used
+    #[arg(
+        long,
+        help = "Specific commit to amend (hash, branch, or reference). Defaults to HEAD when --amend is used"
+    )]
+    commit: Option<String>,
 }
 
 #[tokio::main]
@@ -50,6 +61,8 @@ async fn main() -> Result<()> {
             print_only: args.print,
             verify: !args.no_verify,
             dry_run: args.dry_run,
+            amend: args.amend,
+            commit_ref: args.commit,
         },
         repository_url,
     )

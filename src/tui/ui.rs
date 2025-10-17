@@ -67,7 +67,6 @@ fn draw_nav_bar(f: &mut Frame, area: Rect) {
         ("↔", "Navigate"),
         ("E", "Message"),
         ("I", "Instructions"),
-        ("P", "Preset"),
         ("R", "Regenerate"),
         ("⏎", "Commit"),
     ];

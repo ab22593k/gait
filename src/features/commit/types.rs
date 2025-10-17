@@ -1,12 +1,13 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::fmt::Write;
+use std::fmt::Write as _;
 use textwrap;
 
 /// Model for commit message generation results
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 pub struct GeneratedMessage {
     /// Optional emoji for the commit message
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub emoji: Option<String>,
     /// Commit message title/subject line
     pub title: String,
@@ -18,6 +19,7 @@ pub struct GeneratedMessage {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone)]
 pub struct GeneratedPullRequest {
     /// Optional emoji for the pull request title
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub emoji: Option<String>,
     /// Pull request title
     pub title: String,
@@ -26,12 +28,16 @@ pub struct GeneratedPullRequest {
     /// Detailed description of what was changed and why
     pub description: String,
     /// List of commit messages included in this PR
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub commits: Vec<String>,
     /// Breaking changes if any
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub breaking_changes: Vec<String>,
     /// Testing instructions for reviewers
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub testing_notes: Option<String>,
     /// Additional notes or context
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
 }
 
@@ -40,14 +46,13 @@ pub fn format_commit_message(response: &GeneratedMessage) -> String {
     let mut message = String::new();
 
     if let Some(emoji) = &response.emoji {
-        write!(&mut message, "{emoji} ").expect("write to string should not fail");
+        let _ = write!(&mut message, "{emoji} ");
     }
 
     message.push_str(&response.title);
     message.push_str("\n\n");
 
-    let wrapped_message = textwrap::wrap(&response.message, 78);
-    for line in wrapped_message {
+    for line in textwrap::wrap(&response.message, 78) {
         message.push_str(&line);
         message.push('\n');
     }
@@ -60,53 +65,55 @@ pub fn format_pull_request(response: &GeneratedPullRequest) -> String {
     let mut message = String::new();
 
     // Title with optional emoji
-    if let Some(emoji) = &response.emoji {
-        writeln!(&mut message, "# {emoji} {}", response.title)
-            .expect("write to string should not fail");
-    } else {
-        writeln!(&mut message, "# {}", response.title).expect("write to string should not fail");
+    match &response.emoji {
+        Some(emoji) => {
+            let _ = writeln!(&mut message, "# {emoji} {}", response.title);
+        }
+        None => {
+            let _ = writeln!(&mut message, "# {}", response.title);
+        }
     }
     message.push('\n');
 
     // Summary - no word wrapping for web UI display
-    writeln!(&mut message, "## Summary").expect("write to string should not fail");
-    writeln!(&mut message, "{}", response.summary).expect("write to string should not fail");
+    let _ = writeln!(&mut message, "## Summary");
+    let _ = writeln!(&mut message, "{}", response.summary);
     message.push('\n');
 
     // Description - no word wrapping for web UI display
-    writeln!(&mut message, "## Description").expect("write to string should not fail");
-    writeln!(&mut message, "{}", response.description).expect("write to string should not fail");
+    let _ = writeln!(&mut message, "## Description");
+    let _ = writeln!(&mut message, "{}", response.description);
     message.push('\n');
 
     // Commits
     if !response.commits.is_empty() {
-        writeln!(&mut message, "## Commits").expect("write to string should not fail");
+        let _ = writeln!(&mut message, "## Commits");
         for commit in &response.commits {
-            writeln!(&mut message, "- {commit}").expect("write to string should not fail");
+            let _ = writeln!(&mut message, "- {commit}");
         }
         message.push('\n');
     }
 
     // Breaking changes
     if !response.breaking_changes.is_empty() {
-        writeln!(&mut message, "## Breaking Changes").expect("write to string should not fail");
+        let _ = writeln!(&mut message, "## Breaking Changes");
         for change in &response.breaking_changes {
-            writeln!(&mut message, "- {change}").expect("write to string should not fail");
+            let _ = writeln!(&mut message, "- {change}");
         }
         message.push('\n');
     }
 
     // Testing notes - no word wrapping for web UI display
     if let Some(testing) = &response.testing_notes {
-        writeln!(&mut message, "## Testing").expect("write to string should not fail");
-        writeln!(&mut message, "{testing}").expect("write to string should not fail");
+        let _ = writeln!(&mut message, "## Testing");
+        let _ = writeln!(&mut message, "{testing}");
         message.push('\n');
     }
 
     // Additional notes - no word wrapping for web UI display
     if let Some(notes) = &response.notes {
-        writeln!(&mut message, "## Notes").expect("write to string should not fail");
-        writeln!(&mut message, "{notes}").expect("write to string should not fail");
+        let _ = writeln!(&mut message, "## Notes");
+        let _ = writeln!(&mut message, "{notes}");
     }
 
     message

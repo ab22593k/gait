@@ -533,17 +533,21 @@ impl CommitService {
     /// # Returns
     ///
     /// A Result containing the `CommitResult` or an error.
-    pub fn perform_commit(&self, message: &str) -> Result<CommitResult> {
+    pub fn perform_commit(&self, message: &str, amend: bool, commit_ref: Option<&str>) -> Result<CommitResult> {
         // Check if this is a remote repository
         if self.is_remote_repository() {
             return Err(anyhow::anyhow!("Cannot commit to a remote repository"));
         }
 
-        debug!("Performing commit with message: {}", message);
+        debug!("Performing commit with message: {}, amend: {}, commit_ref: {:?}", message, amend, commit_ref);
 
         if !self.verify {
             debug!("Skipping pre-commit hook (verify=false)");
-            return self.repo.commit(message);
+            if amend {
+                return self.repo.amend_commit(message, commit_ref.unwrap_or("HEAD"));
+            } else {
+                return self.repo.commit(message);
+            }
         }
 
         // Execute pre-commit hook
@@ -555,7 +559,13 @@ impl CommitService {
         debug!("Pre-commit hook executed successfully");
 
         // Perform the commit
-        match self.repo.commit(message) {
+        let commit_result = if amend {
+            self.repo.amend_commit(message, commit_ref.unwrap_or("HEAD"))
+        } else {
+            self.repo.commit(message)
+        };
+
+        match commit_result {
             Ok(result) => {
                 // Execute post-commit hook
                 debug!("Executing post-commit hook");

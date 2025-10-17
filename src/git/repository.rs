@@ -668,6 +668,12 @@ impl GitRepo {
         commit::commit(&repo, message, self.is_remote)
     }
 
+    /// Amend a commit with a new message
+    pub fn amend_commit(&self, message: &str, commit_ref: &str) -> Result<CommitResult> {
+        let repo = self.open_repo()?;
+        commit::amend_commit(&repo, message, commit_ref, self.is_remote)
+    }
+
     /// Check if inside a working tree
     pub fn is_inside_work_tree() -> Result<bool> {
         is_inside_work_tree()

@@ -5,7 +5,7 @@
 
 mod app;
 mod input_handler;
-mod spinner;
+pub mod spinner;
 mod state;
 mod ui;
 

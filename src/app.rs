@@ -99,6 +99,17 @@ pub enum GitAI {
         /// Skip the verification step (pre/post commit hooks)
         #[arg(long, help = "Skip verification steps (pre/post commit hooks)")]
         no_verify: bool,
+
+        /// Amend the last commit or a specific commit with a new AI-generated message
+        #[arg(long, help = "Amend the last commit or a specific commit with a new AI-generated message")]
+        amend: bool,
+
+        /// Specific commit to amend (hash, branch, or reference). Defaults to HEAD when --amend is used
+        #[arg(
+            long,
+            help = "Specific commit to amend (hash, branch, or reference). Defaults to HEAD when --amend is used"
+        )]
+        commit: Option<String>,
     },
 
     /// Review staged changes and provide feedback
@@ -277,6 +288,8 @@ pub struct CmsgConfig {
     pub print_only: bool,
     pub verify: bool,
     pub dry_run: bool,
+    pub amend: bool,
+    pub commit_ref: Option<String>,
 }
 
 pub async fn handle_message(
@@ -285,12 +298,11 @@ pub async fn handle_message(
     repository_url: Option<String>,
 ) -> anyhow::Result<()> {
     debug!(
-        "Handling 'message' command with common: {:?}, auto_commit: {}, use_emoji: {}, print: {}, verify: {}",
-        common, config.auto_commit, config.use_emoji, config.print_only, config.verify
+        "Handling 'message' command with common: {:?}, auto_commit: {}, use_emoji: {}, print: {}, verify: {}, amend: {}, commit_ref: {:?}",
+        common, config.auto_commit, config.use_emoji, config.print_only, config.verify, config.amend, config.commit_ref
     );
 
     ui::print_version(crate_version!());
-    ui::print_newline();
 
     commit::handle_message_command(
         common,
@@ -298,6 +310,8 @@ pub async fn handle_message(
         config.print_only,
         config.verify,
         config.dry_run,
+        config.amend,
+        config.commit_ref,
         repository_url,
     )
     .await
@@ -372,6 +386,8 @@ pub async fn handle_command(command: GitAI, repository_url: Option<String>) -> a
             no_emoji,
             print,
             no_verify,
+            amend,
+            commit,
         } => {
             handle_message(
                 common,
@@ -381,6 +397,8 @@ pub async fn handle_command(command: GitAI, repository_url: Option<String>) -> a
                     print_only: print,
                     verify: !no_verify,
                     dry_run: false,
+                    amend,
+                    commit_ref: commit,
                 },
                 repository_url,
             )
