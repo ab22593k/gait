@@ -317,6 +317,7 @@ impl MockDataBuilder {
             project_metadata: Self::project_metadata(),
             user_name: "Test User".to_string(),
             user_email: "test@example.com".to_string(),
+            author_history: vec!["feat: add user authentication".to_string()],
         }
     }
 
@@ -367,6 +368,10 @@ impl MockDataBuilder {
             },
             user_name: "Test User".to_string(),
             user_email: "test@example.com".to_string(),
+            author_history: vec![
+                "feat: add JWT authentication".to_string(),
+                "fix: resolve token validation bug".to_string(),
+            ],
         }
     }
 

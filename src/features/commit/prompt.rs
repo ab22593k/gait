@@ -36,6 +36,7 @@ pub fn create_user_prompt(context: &CommitContext) -> String {
         staged_changes: format_staged_files(&context.staged_files, &relevance_scores),
         project_metadata: format_project_metadata(&context.project_metadata),
         detailed_changes,
+        author_history: format_author_history(&context.author_history),
     };
 
     let result = render_template("commit_user", &template_context);
@@ -68,12 +69,14 @@ pub fn create_user_prompt(context: &CommitContext) -> String {
             Recent commits:\n{}\n\n\
             Staged changes:\n{}\n\n\
             Project metadata:\n{}\n\n\
-            Detailed changes:\n{}",
+            Detailed changes:\n{}\n\n\
+            Author history:\n{}",
             context.branch,
             template_context.recent_commits,
             template_context.staged_changes,
             template_context.project_metadata,
-            template_context.detailed_changes
+            template_context.detailed_changes,
+            template_context.author_history
         )
     })
 }
@@ -206,6 +209,19 @@ fn format_change_type(change_type: &ChangeType) -> &'static str {
         ChangeType::Added => "Added",
         ChangeType::Modified => "Modified",
         ChangeType::Deleted => "Deleted",
+    }
+}
+
+fn format_author_history(history: &[String]) -> String {
+    if history.is_empty() {
+        "No previous commits found for this author.".to_string()
+    } else {
+        history
+            .iter()
+            .enumerate()
+            .map(|(i, msg)| format!("{}. {}", i + 1, msg.lines().next().unwrap_or("")))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 

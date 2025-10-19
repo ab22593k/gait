@@ -377,6 +377,9 @@ impl GitRepo {
         let user_name = repo.config()?.get_string("user.name").unwrap_or_default();
         let user_email = repo.config()?.get_string("user.email").unwrap_or_default();
 
+        // Get author's commit history (last 10 commits)
+        let author_history = self.get_author_commit_history(&user_email, 10)?;
+
         // Create and return the context
         Ok(CommitContext::new(
             branch,
@@ -385,6 +388,7 @@ impl GitRepo {
             project_metadata,
             user_name,
             user_email,
+            author_history,
         ))
     }
 
@@ -570,6 +574,49 @@ impl GitRepo {
             .collect::<Result<Vec<_>>>()?;
 
         debug!("Retrieved {} recent commits", commits.len());
+        Ok(commits)
+    }
+
+    /// Retrieves the author's recent commit messages.
+    ///
+    /// # Arguments
+    ///
+    /// * `author_email` - The email of the author to filter by.
+    /// * `count` - The number of recent commits to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// A Result containing a Vec of commit message strings or an error.
+    pub fn get_author_commit_history(&self, author_email: &str, count: usize) -> Result<Vec<String>> {
+        let repo = self.open_repo()?;
+        debug!("Fetching {} recent commits for author: {}", count, author_email);
+        let mut revwalk = repo.revwalk()?;
+        revwalk.push_head()?;
+
+        let commits = revwalk
+            .filter_map(|oid| {
+                let oid = match oid {
+                    Ok(o) => o,
+                    Err(_) => return Some(Err(anyhow!("Failed to get commit OID"))),
+                };
+                let commit = match repo.find_commit(oid) {
+                    Ok(c) => c,
+                    Err(_) => return Some(Err(anyhow!("Failed to find commit"))),
+                };
+                let author = commit.author();
+
+                // Filter by author email
+                if author.email() == Some(author_email) {
+                    // Return only the commit message
+                    Some(Ok(commit.message().unwrap_or_default().to_string()))
+                } else {
+                    None // Skip commits by other authors
+                }
+            })
+            .take(count) // Take only the required number of commits
+            .collect::<Result<Vec<_>>>()?;
+
+        debug!("Retrieved {} commits for author {}", commits.len(), author_email);
         Ok(commits)
     }
 

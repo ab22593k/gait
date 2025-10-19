@@ -275,6 +275,10 @@ fn create_test_context_with_large_data() -> CommitContext {
         },
         user_name: "Test User".to_string(),
         user_email: "test@example.com".to_string(),
+        author_history: vec![
+            "feat: implement large feature with many changes".to_string(),
+            "fix: resolve performance issue in data processing".to_string(),
+        ],
     }
 }
 

@@ -93,6 +93,7 @@ pub struct CommitUserTemplateContext<'a> {
     pub staged_changes: String,
     pub project_metadata: String,
     pub detailed_changes: String,
+    pub author_history: String,
 }
 
 #[derive(Serialize)]

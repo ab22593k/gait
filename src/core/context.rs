@@ -11,6 +11,7 @@ pub struct CommitContext {
     pub project_metadata: ProjectMetadata,
     pub user_name: String,
     pub user_email: String,
+    pub author_history: Vec<String>,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -164,6 +165,7 @@ impl CommitContext {
         project_metadata: ProjectMetadata,
         user_name: String,
         user_email: String,
+        author_history: Vec<String>,
     ) -> Self {
         Self {
             branch,
@@ -172,8 +174,10 @@ impl CommitContext {
             project_metadata,
             user_name,
             user_email,
+            author_history,
         }
     }
+
     pub fn optimize(&mut self, max_tokens: usize) {
         let optimizer = TokenOptimizer::new(max_tokens).expect(
             "Failed to initialize token optimizer. Ensure the tokenizer data is available.",
