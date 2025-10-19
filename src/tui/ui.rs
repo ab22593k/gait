@@ -10,10 +10,16 @@ use unicode_width::UnicodeWidthStr;
 
 const _APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-// Theme constants for consistent styling
+// Enhanced theme with richer color palette
 const ACCENT_COLOR: Color = Color::Cyan;
+const ACCENT_COLOR_DIM: Color = Color::Blue;
 const BORDER_COLOR: Color = Color::DarkGray;
+const BORDER_COLOR_ACTIVE: Color = Color::Cyan;
 const SEPARATOR_COLOR: Color = Color::DarkGray;
+const TITLE_COLOR: Color = Color::Cyan;
+const HELP_HEADER_COLOR: Color = Color::Magenta;
+const SUCCESS_COLOR: Color = Color::Green;
+const WARNING_COLOR: Color = Color::Yellow;
 
 /// Main UI rendering entry point
 pub fn draw_ui(f: &mut Frame, state: &mut TuiState) {
@@ -64,26 +70,6 @@ fn render_sections(f: &mut Frame, state: &mut TuiState, chunks: &[Rect]) {
 
 fn draw_nav_bar(f: &mut Frame, state: &TuiState, area: Rect) {
     let nav_items: Vec<(&str, &str)> = match state.mode {
-<<<<<<< HEAD
-        Mode::RebaseList => vec![
-            ("↑↓", "Navigate"),
-            ("⏎", "Edit"),
-            ("␣", "Action"),
-            ("Esc", "Exit"),
-        ],
-        Mode::RebaseEdit => vec![
-            ("Esc", "Save"),
-        ],
-||||||| parent of a9d2184 (Remove rebase functionality)
-        Mode::RebaseList => vec![
-            ("↑↓", "Navigate"),
-            ("⏎", "Edit"),
-            ("␣", "Action"),
-            ("Esc", "Exit"),
-        ],
-        Mode::RebaseEdit => vec![("Esc", "Save")],
-=======
->>>>>>> a9d2184 (Remove rebase functionality)
         _ => vec![
             ("↔", "Navigate"),
             ("E", "Message"),
@@ -99,23 +85,26 @@ fn draw_nav_bar(f: &mut Frame, state: &TuiState, area: Rect) {
         .flat_map(|(i, (key, desc))| {
             let mut spans = vec![
                 Span::styled(
-                    (*key).to_string(),
+                    format!(" {}", *key),
                     Style::default()
                         .fg(ACCENT_COLOR)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(format!(":{desc}"), Style::default()),
+                Span::styled(format!(" {}", desc), Style::default().fg(Color::Gray)),
             ];
 
             if i < nav_items.len() - 1 {
-                spans.push(Span::styled(" • ", Style::default().fg(SEPARATOR_COLOR)));
+                spans.push(Span::styled("  │  ", Style::default().fg(SEPARATOR_COLOR)));
             }
 
             spans
         })
         .collect::<Vec<_>>();
 
-    let nav_bar = Paragraph::new(Line::from(nav_spans)).alignment(ratatui::layout::Alignment::Left);
+    let nav_bar = Paragraph::new(Line::from(nav_spans))
+        .alignment(ratatui::layout::Alignment::Left)
+        .style(Style::default());
+
     f.render_widget(nav_bar, area);
 }
 
@@ -123,23 +112,32 @@ fn draw_commit_message(f: &mut Frame, state: &mut TuiState, area: Rect) {
     match state.mode {
         Mode::Help => draw_help(f, state, area),
         _ => {
+            let is_editing = state.mode == Mode::EditingMessage;
+            let border_color = if is_editing {
+                BORDER_COLOR_ACTIVE
+            } else {
+                BORDER_COLOR
+            };
+
             let title = format!(
-                "✦ Commit Message ({}/{})",
+                "{} Commit Message ({}/{}) {}",
+                if is_editing { "✎" } else { "✦" },
                 state.current_index + 1,
-                state.messages.len()
+                state.messages.len(),
+                if is_editing { "[EDITING]" } else { "" }
             );
 
             let message_block = Block::default()
                 .title(Span::styled(
                     title,
                     Style::default()
-                        .fg(ACCENT_COLOR)
+                        .fg(TITLE_COLOR)
                         .add_modifier(Modifier::BOLD),
                 ))
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(BORDER_COLOR));
+                .border_style(Style::default().fg(border_color));
 
-            if state.mode == Mode::EditingMessage {
+            if is_editing {
                 state.message_textarea.set_block(message_block);
                 state.message_textarea.set_style(Style::default());
                 f.render_widget(&state.message_textarea, area);
@@ -152,9 +150,26 @@ fn draw_commit_message(f: &mut Frame, state: &mut TuiState, area: Rect) {
 
 fn render_commit_message_content(f: &mut Frame, state: &TuiState, block: Block, area: Rect) {
     let current_message = &state.messages[state.current_index];
-    let message_content = format!("{}\n{}", current_message.title, current_message.message);
 
-    let message = Paragraph::new(message_content)
+    // Enhanced formatting with visual separation
+    let title_line = Line::from(vec![Span::styled(
+        &current_message.title,
+        Style::default()
+            .fg(Color::White)
+            .add_modifier(Modifier::BOLD),
+    )]);
+
+    let separator = Line::from(vec![Span::styled(
+        "─".repeat(area.width.saturating_sub(4) as usize),
+        Style::default().fg(BORDER_COLOR),
+    )]);
+
+    let body_text = Line::from(vec![Span::styled(
+        &current_message.message,
+        Style::default().fg(Color::Gray),
+    )]);
+
+    let message = Paragraph::new(vec![title_line, separator, Line::from(""), body_text])
         .block(block)
         .style(Style::default())
         .wrap(Wrap { trim: true });
@@ -163,24 +178,37 @@ fn render_commit_message_content(f: &mut Frame, state: &TuiState, block: Block, 
 }
 
 fn draw_instructions(f: &mut Frame, state: &mut TuiState, area: Rect) {
+    let is_editing = state.mode == Mode::EditingInstructions;
+    let border_color = if is_editing {
+        BORDER_COLOR_ACTIVE
+    } else {
+        BORDER_COLOR
+    };
+
+    let title = format!(
+        "{} Custom Instructions {}",
+        if is_editing { "✎" } else { "✧" },
+        if is_editing { "[EDITING]" } else { "" }
+    );
+
     let instructions_block = Block::default()
         .title(Span::styled(
-            "✧ Custom Instructions",
+            title,
             Style::default()
-                .fg(ACCENT_COLOR)
+                .fg(TITLE_COLOR)
                 .add_modifier(Modifier::BOLD),
         ))
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(BORDER_COLOR));
+        .border_style(Style::default().fg(border_color));
 
-    if state.mode == Mode::EditingInstructions {
+    if is_editing {
         state.instructions_textarea.set_block(instructions_block);
         state.instructions_textarea.set_style(Style::default());
         f.render_widget(&state.instructions_textarea, area);
     } else {
         let instructions = Paragraph::new(state.custom_instructions.clone())
             .block(instructions_block)
-            .style(Style::default())
+            .style(Style::default().fg(Color::Gray))
             .wrap(Wrap { trim: true });
         f.render_widget(instructions, area);
     }
@@ -201,10 +229,21 @@ fn get_status_components(state: &mut TuiState) -> (String, String, Color, usize)
     if let Some(spinner) = &mut state.spinner {
         spinner.tick()
     } else {
+        // Enhanced status color based on content
+        let color = if state.status.contains("Error") || state.status.contains("Failed") {
+            Color::Red
+        } else if state.status.contains("Success") || state.status.contains("Complete") {
+            SUCCESS_COLOR
+        } else if state.status.contains("Warning") {
+            WARNING_COLOR
+        } else {
+            Color::Reset
+        };
+
         (
             "  ".to_string(),
             state.status.clone(),
-            Color::Reset,
+            color,
             state.status.width() + 2,
         )
     }
@@ -230,124 +269,124 @@ fn create_centered_status_line(
     ])
 }
 
-
-
-
-
-
 fn draw_help(f: &mut Frame, _state: &mut TuiState, area: Rect) {
     let help_text = vec![
+        Line::from(vec![Span::styled(
+            "✨ Commit Message TUI Help",
+            Style::default()
+                .fg(HELP_HEADER_COLOR)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "━━ Navigation ━━",
+            Style::default()
+                .fg(ACCENT_COLOR_DIM)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
-            Span::styled("✨ Commit Message TUI Help", Style::default().fg(ACCENT_COLOR).add_modifier(Modifier::BOLD))
+            Span::styled("  ←→ / hl", Style::default().fg(ACCENT_COLOR)),
+            Span::styled(
+                "         Navigate between messages",
+                Style::default().fg(Color::Gray),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("  ↑↓ / jk", Style::default().fg(ACCENT_COLOR)),
+            Span::styled(
+                "         Navigate within message",
+                Style::default().fg(Color::Gray),
+            ),
         ]),
         Line::from(""),
+        Line::from(vec![Span::styled(
+            "━━ Actions ━━",
+            Style::default()
+                .fg(ACCENT_COLOR_DIM)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
-            Span::styled("Navigation:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            Span::styled("  Enter", Style::default().fg(SUCCESS_COLOR)),
+            Span::styled(
+                "            Commit with selected message",
+                Style::default().fg(Color::Gray),
+            ),
         ]),
-        Line::from("  ←→ / hl         Navigate between messages"),
-        Line::from("  ↑↓ / jk         Navigate within message"),
-        Line::from(""),
         Line::from(vec![
-            Span::styled("Actions:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            Span::styled("  E", Style::default().fg(ACCENT_COLOR)),
+            Span::styled(
+                "                 Edit current message",
+                Style::default().fg(Color::Gray),
+            ),
         ]),
-        Line::from("  Enter            Commit with selected message"),
-        Line::from("  E                Edit current message"),
-        Line::from("  I                Edit custom instructions"),
-        Line::from("  R                Regenerate messages"),
-        Line::from("  ?                Toggle navigation bar"),
-        Line::from(""),
         Line::from(vec![
-            Span::styled("Other:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            Span::styled("  I", Style::default().fg(ACCENT_COLOR)),
+            Span::styled(
+                "                 Edit custom instructions",
+                Style::default().fg(Color::Gray),
+            ),
         ]),
-        Line::from("  Esc              Exit without committing"),
-        Line::from("  ?                Show this help"),
+        Line::from(vec![
+            Span::styled("  R", Style::default().fg(ACCENT_COLOR)),
+            Span::styled(
+                "                 Regenerate messages",
+                Style::default().fg(Color::Gray),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("  ?", Style::default().fg(ACCENT_COLOR)),
+            Span::styled(
+                "                 Toggle navigation bar",
+                Style::default().fg(Color::Gray),
+            ),
+        ]),
         Line::from(""),
-        Line::from("Press any key to close help"),
+        Line::from(vec![Span::styled(
+            "━━ Other ━━",
+            Style::default()
+                .fg(ACCENT_COLOR_DIM)
+                .add_modifier(Modifier::BOLD),
+        )]),
+        Line::from(vec![
+            Span::styled("  Esc", Style::default().fg(Color::Red)),
+            Span::styled(
+                "               Exit without committing",
+                Style::default().fg(Color::Gray),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("  ?", Style::default().fg(ACCENT_COLOR)),
+            Span::styled(
+                "                 Show this help",
+                Style::default().fg(Color::Gray),
+            ),
+        ]),
+        Line::from(""),
+        Line::from(vec![Span::styled(
+            "Press any key to close help",
+            Style::default()
+                .fg(Color::DarkGray)
+                .add_modifier(Modifier::ITALIC),
+        )]),
     ];
 
     let help_block = Block::default()
         .title(Span::styled(
             "❓ Help",
             Style::default()
-                .fg(ACCENT_COLOR)
+                .fg(HELP_HEADER_COLOR)
                 .add_modifier(Modifier::BOLD),
         ))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(BORDER_COLOR));
 
-<<<<<<< HEAD
-    let mut lines = vec![];
-    for (i, commit) in state.rebase_commits.iter().enumerate() {
-        let is_selected = i == state.rebase_current_index;
-        let prefix = if is_selected { "▶ " } else { "  " };
-        let action = format!("{:6}", commit.suggested_action.to_string());
-        let hash = &commit.hash[..8];
-        let message = commit.message.lines().next().unwrap_or("");
-
-        let style = if is_selected {
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default()
-        };
-
-        lines.push(Line::from(vec![
-            Span::styled(prefix, style),
-            Span::styled(action, Style::default().fg(Color::Cyan)),
-            Span::raw(" "),
-            Span::styled(hash, Style::default().fg(Color::DarkGray)),
-            Span::raw(" "),
-            Span::styled(message, style),
-        ]));
-    }
-
-    let list = Paragraph::new(lines)
-        .block(list_block)
-||||||| parent of a9d2184 (Remove rebase functionality)
-    let mut lines = vec![];
-    for (i, commit) in state.rebase_commits.iter().enumerate() {
-        let is_selected = i == state.rebase_current_index;
-        let prefix = if is_selected { "▶ " } else { "  " };
-        let action = format!("{:6}", commit.suggested_action.to_string());
-        let hash = format!("{:8}", &commit.hash);
-        let message = commit.message.lines().next().unwrap_or("");
-
-        let style = if is_selected {
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default()
-        };
-
-        lines.push(Line::from(vec![
-            Span::styled(prefix, style),
-            Span::styled(action, Style::default().fg(Color::Cyan)),
-            Span::raw(" "),
-            Span::styled(hash, Style::default().fg(Color::DarkGray)),
-            Span::raw(" "),
-            Span::styled(message, style),
-        ]));
-    }
-
-    let list = Paragraph::new(lines)
-        .block(list_block)
-=======
     let help_paragraph = Paragraph::new(help_text)
         .block(help_block)
->>>>>>> a9d2184 (Remove rebase functionality)
         .style(Style::default())
         .wrap(Wrap { trim: true });
 
     f.render_widget(help_paragraph, area);
 }
-
-
-
-
-
-
-
-
 
 fn calculate_padding(terminal_width: usize, content_width: usize) -> (usize, usize) {
     if content_width >= terminal_width {
