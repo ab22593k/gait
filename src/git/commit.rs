@@ -1,9 +1,10 @@
 use crate::core::context::{ChangeType, RecentCommit, StagedFile};
 use crate::git::utils::is_binary_diff;
-use crate::{analyzer, debug};
+use crate::{analyzer};
 use anyhow::{Context, Result, anyhow};
 use chrono;
 use git2::{FileMode, Repository, Status};
+use log::debug;
 
 /// Results from a commit operation
 #[derive(Debug)]

@@ -8,13 +8,13 @@ pub use types::{RebaseAction, RebaseAnalysis, RebaseCommit, RebaseResult};
 
 use crate::common::CommonParams;
 use crate::config::Config;
-use crate::debug;
 use crate::git::GitRepo;
 use crate::tui::run_tui_rebase;
 use crate::ui;
 
 use anyhow::Result;
 use std::sync::Arc;
+use log::debug;
 
 /// Handle the rebase command
 pub async fn handle_rebase_command(

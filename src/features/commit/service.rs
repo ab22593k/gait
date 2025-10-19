@@ -5,13 +5,13 @@ use crate::config::Config;
 use crate::core::context::CommitContext;
 use crate::core::llm;
 use crate::core::token_optimizer::TokenOptimizer;
-use crate::debug;
 use crate::git::{CommitResult, GitRepo};
 
 use anyhow::Result;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
+use log::debug;
 
 /// Service for handling Git commit operations with AI assistance
 pub struct CommitService {

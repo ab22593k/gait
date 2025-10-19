@@ -1,10 +1,10 @@
 use crate::analyzer;
 use crate::core::context::ProjectMetadata;
-use crate::debug;
 use anyhow::Result;
 use futures::future::join_all;
 use std::path::Path;
 use tokio::task;
+use log::debug;
 
 /// Analyzes a single file and extracts its metadata
 pub async fn analyze_file(file_path: &str) -> Option<ProjectMetadata> {

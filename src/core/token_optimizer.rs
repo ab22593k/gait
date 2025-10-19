@@ -1,5 +1,6 @@
-use crate::{core::context::CommitContext, debug};
+use crate::{core::context::CommitContext};
 use tiktoken_rs::cl100k_base;
+use log::debug;
 
 pub struct TokenOptimizer {
     encoder: tiktoken_rs::CoreBPE,

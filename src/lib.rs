@@ -5,7 +5,6 @@ pub mod config;
 pub mod core;
 pub mod features;
 pub mod git;
-pub mod logger;
 pub mod remote;
 pub mod tui;
 pub mod ui;

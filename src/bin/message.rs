@@ -2,7 +2,6 @@ use anyhow::Result;
 use clap::Parser;
 use gitai::app::{self, CmsgConfig};
 use gitai::common::CommonParams;
-use gitai::logger;
 
 #[derive(Parser)]
 #[command(name = "git-message", about = "Generate a commit message using AI")]
@@ -48,7 +47,7 @@ struct MessageArgs {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    logger::init().expect("Failed to initialize logger");
+    env_logger::init();
 
     let args = MessageArgs::parse();
     let repository_url = args.common.repository_url.clone();

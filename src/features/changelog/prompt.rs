@@ -4,8 +4,8 @@ use super::{
 };
 use crate::common::{DetailLevel, get_combined_instructions};
 use crate::config::Config;
-use crate::debug;
 use std::fmt::Write;
+use log::debug;
 
 pub fn create_changelog_system_prompt(config: &Config) -> String {
     let changelog_schema = schemars::schema_for!(ChangelogResponse);

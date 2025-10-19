@@ -3,13 +3,13 @@
 use super::types::{RebaseAction, RebaseAnalysis, RebaseCommit, RebaseResult};
 use crate::config::Config;
 use crate::core::llm;
-use crate::debug;
 use crate::git::GitRepo;
 use crate::ui;
 
 use anyhow::Result;
 use git2::Status;
 use std::sync::Arc;
+use log::debug;
 
 /// Service for handling AI-assisted rebase operations
 pub struct RebaseService {

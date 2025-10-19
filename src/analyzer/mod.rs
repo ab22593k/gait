@@ -3,8 +3,8 @@ use std::path::Path;
 
 use crate::{
     core::context::{ProjectMetadata, StagedFile},
-    debug,
 };
+use log::debug;
 
 /// Trait for analyzing files and extracting relevant information
 pub trait FileAnalyzer: Send + Sync {

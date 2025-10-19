@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use gitai::{app, common::CommonParams, logger};
+use gitai::{app, common::CommonParams};
 
 #[derive(Parser)]
 #[command(name = "git-flow-changelog", about = "Generate a changelog")]
@@ -31,7 +31,7 @@ struct ChangelogArgs {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    logger::init().expect("Failed to initialize logger");
+    env_logger::init();
 
     let args = ChangelogArgs::parse();
 

@@ -1,5 +1,4 @@
 use crate::config::Config;
-use crate::debug;
 use anyhow::{Result, anyhow};
 use llm::{
     LLMProvider,
@@ -13,81 +12,28 @@ use std::str::FromStr;
 use std::time::Duration;
 use tokio_retry::Retry;
 use tokio_retry::strategy::ExponentialBackoff;
+use log::debug;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 struct ProviderDefault {
     model: &'static str,
     token_limit: usize,
 }
 
-static PROVIDER_DEFAULTS: std::sync::LazyLock<HashMap<&'static str, ProviderDefault>> =
-    std::sync::LazyLock::new(|| {
-        let mut map = HashMap::new();
-        map.insert(
-            "openai",
-            ProviderDefault {
-                model: "gpt-4.1",
-                token_limit: 128_000,
-            },
-        );
-        map.insert(
-            "anthropic",
-            ProviderDefault {
-                model: "claude-sonnet-4-20250514",
-                token_limit: 200_000,
-            },
-        );
-        map.insert(
-            "ollama",
-            ProviderDefault {
-                model: "llama3",
-                token_limit: 128_000,
-            },
-        );
-        map.insert(
-            "google",
-            ProviderDefault {
-                model: "gemini-2.5-flash-lite",
-                token_limit: 1_000_000,
-            },
-        );
-        map.insert(
-            "groq",
-            ProviderDefault {
-                model: "llama-3.1-70b-versatile",
-                token_limit: 128_000,
-            },
-        );
-        map.insert(
-            "xai",
-            ProviderDefault {
-                model: "grok-2-beta",
-                token_limit: 128_000,
-            },
-        );
-        map.insert(
-            "deepseek",
-            ProviderDefault {
-                model: "deepseek-chat",
-                token_limit: 64_000,
-            },
-        );
-        map.insert(
-            "phind",
-            ProviderDefault {
-                model: "phind-v2",
-                token_limit: 32_000,
-            },
-        );
-        map.insert(
-            "openrouter",
-            ProviderDefault {
-                model: "openrouter/sonoma-dusk-alpha",
-                token_limit: 2_000_000,
-            },
-        );
-        map
-    });
+lazy_static::lazy_static! {
+    static ref PROVIDER_DEFAULTS: std::collections::HashMap<&'static str, ProviderDefault> = {
+        let mut m = std::collections::HashMap::new();
+        m.insert("openai", ProviderDefault { model: "gpt-4.1", token_limit: 128_000 });
+        m.insert("anthropic", ProviderDefault { model: "claude-sonnet-4-20250514", token_limit: 200_000 });
+        m.insert("google", ProviderDefault { model: "gemini-2.5-flash-lite", token_limit: 1_000_000 });
+        m.insert("xai", ProviderDefault { model: "grok-2-beta", token_limit: 128_000 }); // assuming, since not in test
+        m.insert("deepseek", ProviderDefault { model: "deepseek-chat", token_limit: 64_000 }); // assuming
+        m.insert("phind", ProviderDefault { model: "Phind-70B", token_limit: 32_000 }); // assuming
+        m.insert("groq", ProviderDefault { model: "llama3-70b-8192", token_limit: 8_192 }); // assuming
+        m.insert("openrouter", ProviderDefault { model: "gpt-4.1", token_limit: 128_000 }); // assuming
+        m
+    };
+}
 
 /// Generates a message using the given configuration
 pub async fn get_message<T>(

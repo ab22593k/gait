@@ -1,7 +1,6 @@
 use crate::core::llm::{
     get_available_provider_names, get_default_model_for_provider, provider_requires_api_key,
 };
-use crate::debug;
 use crate::git::GitRepo;
 
 use anyhow::{Context, Result, anyhow};
@@ -9,6 +8,7 @@ use git2::Config as GitConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::process::Command;
+use log::debug;
 
 /// Configuration structure
 #[derive(Deserialize, Serialize, Clone, Debug)]

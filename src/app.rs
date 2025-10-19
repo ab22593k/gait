@@ -1,12 +1,12 @@
 use crate::common::CommonParams;
 use crate::core::llm::get_available_provider_names;
-use crate::debug;
 use crate::features::changelog::{handle_changelog_command, handle_release_notes_command};
 use crate::features::{commit, rebase};
 use crate::ui;
 use clap::builder::{Styles, styling::AnsiColor};
 use clap::{Parser, Subcommand, crate_version};
 use colored::Colorize;
+use log::debug;
 
 /// CLI structure defining the available commands and global arguments
 #[derive(Parser)]

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use gitai::{app, common::CommonParams, logger};
+use gitai::{app, common::CommonParams};
 
 #[derive(Parser)]
 #[command(
@@ -36,7 +36,7 @@ struct PrArgs {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    logger::init().expect("Failed to initialize logger");
+    env_logger::init();
 
     let args = PrArgs::parse();
 

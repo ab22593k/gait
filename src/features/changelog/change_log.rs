@@ -3,7 +3,6 @@ use super::models::{BreakingChange, ChangeEntry, ChangeMetrics, ChangelogRespons
 use super::prompt;
 use crate::common::DetailLevel;
 use crate::config::Config;
-use crate::debug;
 use crate::git::GitRepo;
 use anyhow::{Context, Result};
 use chrono;
@@ -14,6 +13,7 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
+use log::debug;
 
 /// Struct responsible for generating changelogs
 pub struct ChangelogGenerator;

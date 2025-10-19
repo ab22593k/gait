@@ -1,11 +1,11 @@
 use crate::analyzer::{self, should_exclude_file};
 use crate::core::context::{ChangeType, RecentCommit, StagedFile};
-use crate::debug;
 use crate::git::utils::is_binary_diff;
 use anyhow::{Context, Result};
 use git2::{DiffOptions, Repository, StatusOptions};
 use std::fs;
 use std::path::Path;
+use log::debug;
 
 /// Collects repository information about files and branches
 #[derive(Debug)]

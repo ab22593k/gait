@@ -1,7 +1,7 @@
-use crate::debug;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use log::debug;
 
 /// Represents the structured response for a changelog
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]

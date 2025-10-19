@@ -2,7 +2,6 @@ use super::input_handler::{InputResult, handle_input};
 use super::spinner::SpinnerState;
 use super::state::{Mode, TuiState};
 use super::ui::draw_ui;
-use crate::debug;
 use crate::features::commit::{CommitService, format_commit_result, types::GeneratedMessage};
 use anyhow::{Error, Result};
 use ratatui::{
@@ -18,6 +17,7 @@ use ratatui::{
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
+use log::debug;
 
 pub struct TuiCommit {
     pub state: TuiState,

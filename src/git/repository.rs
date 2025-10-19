@@ -1,6 +1,5 @@
 use crate::config::Config;
 use crate::core::context::{CommitContext, ProjectMetadata, RecentCommit, StagedFile};
-use crate::debug;
 use crate::features::rebase::RebaseResult;
 use crate::git::commit::{self, CommitResult};
 use crate::git::files::{RepoFilesInfo, get_file_statuses, get_unstaged_file_statuses};
@@ -14,6 +13,7 @@ use std::process::{Command, Stdio};
 
 use tempfile::TempDir;
 use url::Url;
+use log::debug;
 
 /// Represents a Git repository and provides methods for interacting with it.
 pub struct GitRepo {

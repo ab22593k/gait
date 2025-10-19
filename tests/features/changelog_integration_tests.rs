@@ -2,12 +2,13 @@
 
 use anyhow::Result;
 use dotenv::dotenv;
+use env_logger;
 use git2::Repository;
 use gitai::changes::models::{ChangelogResponse, ReleaseNotesResponse};
 use gitai::changes::{ChangelogGenerator, ReleaseNotesGenerator};
 use gitai::common::DetailLevel;
 use gitai::config::Config;
-use gitai::logger;
+
 use std::env;
 use tempfile::TempDir;
 
@@ -17,9 +18,9 @@ mod test_utils;
 use test_utils::setup_git_repo_with_tags;
 
 fn setup_test_repo() -> Result<(TempDir, Repository)> {
-    let _ = logger::init(); // Initialize the logger
-    logger::enable_logging(); // Enable logging
-    logger::set_log_to_stdout(true);
+    env_logger::Builder::from_default_env()
+        .target(env_logger::Target::Stdout)
+        .init();
 
     setup_git_repo_with_tags()
 }
