@@ -37,7 +37,7 @@ fn test_get_default_model_for_provider() {
     );
     assert_eq!(
         get_default_model_for_provider("google"),
-        "gemini-2.5-pro-preview-06-05"
+        "gemini-2.5-flash-lite"
     );
     assert_eq!(get_default_model_for_provider("xai"), "grok-2-beta");
 
