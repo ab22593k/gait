@@ -3,9 +3,6 @@ use super::types::GeneratedMessage;
 use crate::common::get_combined_instructions;
 use crate::config::Config;
 use crate::core::context::{ChangeType, CommitContext, ProjectMetadata, RecentCommit, StagedFile};
-use crate::core::template::{
-    CommitSystemTemplateContext, CommitUserTemplateContext, render_template,
-};
 
 use log::debug;
 use std::collections::HashMap;
@@ -14,12 +11,12 @@ pub fn create_system_prompt(config: &Config) -> anyhow::Result<String> {
     let commit_schema = schemars::schema_for!(GeneratedMessage);
     let commit_schema_str = serde_json::to_string_pretty(&commit_schema)?;
 
-    let context = CommitSystemTemplateContext {
-        schema: commit_schema_str,
-        combined_instructions: get_combined_instructions(config),
-    };
+    let combined_instructions = get_combined_instructions(config);
 
-    render_template("commit_system", &context)
+    Ok(format!(
+        "As an expert Git Commit Message Generator, your role is to infer and generate a complete,\nwell-structured Conventional Commit message from the supplied context.\n\nCore Directives:\n1. Execute these instructions: {}\n2. Output Format Enforcement: Your final output MUST STRICTLY conform to the following JSON schema,\ndesigned for structured data extraction: {}\n\nOutput ONLY the resulting JSON object, ensuring no explanatory text, preambles,\nor extraneous content is included.\n",
+        combined_instructions, commit_schema_str
+    ))
 }
 
 pub fn create_user_prompt(context: &CommitContext) -> String {
@@ -27,16 +24,10 @@ pub fn create_user_prompt(context: &CommitContext) -> String {
     let relevance_scores = scorer.score(context);
     let detailed_changes = format_detailed_changes(&context.staged_files, &relevance_scores);
 
-    let template_context = CommitUserTemplateContext {
-        context,
-        recent_commits: format_recent_commits(&context.recent_commits),
-        staged_changes: format_staged_files(&context.staged_files, &relevance_scores),
-        project_metadata: format_project_metadata(&context.project_metadata),
-        detailed_changes,
-        author_history: format_author_history(&context.author_history),
-    };
-
-    let result = render_template("commit_user", &template_context);
+    let recent_commits = format_recent_commits(&context.recent_commits);
+    let staged_changes = format_staged_files(&context.staged_files, &relevance_scores);
+    let project_metadata = format_project_metadata(&context.project_metadata);
+    let author_history = format_author_history(&context.author_history);
 
     debug!(
         "Generated commit prompt for {} files ({} added, {} modified, {} deleted)",
@@ -58,24 +49,15 @@ pub fn create_user_prompt(context: &CommitContext) -> String {
             .count()
     );
 
-    result.unwrap_or_else(|_| {
-        // Fallback to old implementation if template fails
-        format!(
-            "Based on the following context, generate a Git commit message:\n\n\
-            Branch: {}\n\n\
-            Recent commits:\n{}\n\n\
-            Staged changes:\n{}\n\n\
-            Project metadata:\n{}\n\n\
-            Detailed changes:\n{}\n\n\
-            Author history:\n{}",
-            context.branch,
-            template_context.recent_commits,
-            template_context.staged_changes,
-            template_context.project_metadata,
-            template_context.detailed_changes,
-            template_context.author_history
-        )
-    })
+    format!(
+        "ANALYZE the provided context,\nincluding the Branch ({}), Recent Commits ({}),\nStaged Changes ({}), Project Metadata ({}),\nand Detailed Changes ({}).\n\nSpecifically, examine the Author's Commit History ({}) to ADAPT the tone,\nstyle, and formatting of the generated message to ensure strict consistency with the author's\nprevious patterns.\n",
+        context.branch,
+        recent_commits,
+        staged_changes,
+        project_metadata,
+        detailed_changes,
+        author_history
+    )
 }
 
 fn format_recent_commits(commits: &[RecentCommit]) -> String {
