@@ -14,10 +14,6 @@ struct MessageArgs {
     #[arg(short, long, help = "Automatically commit with the generated message")]
     auto_commit: bool,
 
-    /// Disable emoji for this commit
-    #[arg(long, help = "Disable emoji for this commit")]
-    no_emoji: bool,
-
     /// Print the generated message to stdout and exit
     #[arg(short, long, help = "Print the generated message to stdout and exit")]
     print: bool,
@@ -34,7 +30,10 @@ struct MessageArgs {
     dry_run: bool,
 
     /// Amend the last commit or a specific commit with a new AI-generated message
-    #[arg(long, help = "Amend the last commit or a specific commit with a new AI-generated message")]
+    #[arg(
+        long,
+        help = "Amend the last commit or a specific commit with a new AI-generated message"
+    )]
     amend: bool,
 
     /// Specific commit to amend (hash, branch, or reference). Defaults to HEAD when --amend is used
@@ -56,7 +55,6 @@ async fn main() -> Result<()> {
         args.common,
         CmsgConfig {
             auto_commit: args.auto_commit,
-            use_emoji: !args.no_emoji,
             print_only: args.print,
             verify: !args.no_verify,
             dry_run: args.dry_run,

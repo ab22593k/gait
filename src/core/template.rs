@@ -80,9 +80,8 @@ fn load_templates_from_dir(handlebars: &mut Handlebars<'static>, dir: &Path) -> 
 
 /// Template context data structures
 #[derive(Serialize)]
-pub struct CommitSystemTemplateContext<'a> {
-    pub config: &'a crate::config::Config,
-    pub schema: serde_json::Value,
+pub struct CommitSystemTemplateContext {
+    pub schema: String,
     pub combined_instructions: String,
 }
 

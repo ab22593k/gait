@@ -15,8 +15,7 @@ pub fn create_system_prompt(config: &Config) -> anyhow::Result<String> {
     let commit_schema_str = serde_json::to_string_pretty(&commit_schema)?;
 
     let context = CommitSystemTemplateContext {
-        config,
-        schema: serde_json::from_str(&commit_schema_str)?,
+        schema: commit_schema_str,
         combined_instructions: get_combined_instructions(config),
     };
 
@@ -265,7 +264,6 @@ pub fn create_pr_system_prompt(config: &Config) -> anyhow::Result<String> {
         Your response must be a valid JSON object with the following structure:
 
         {
-          \"emoji\": \"string or null\",
           \"title\": \"Clear, descriptive PR title\",
           \"summary\": \"Brief overview of the changes\",
           \"description\": \"Detailed explanation organized into Features section with sub-sections for Core Capabilities, Technical Details, CLI/Integration details, etc.\",
@@ -292,7 +290,6 @@ pub fn create_pr_system_prompt(config: &Config) -> anyhow::Result<String> {
         Example output format:
 
         {
-          \"emoji\": \"✨\",
           \"title\": \"Add comprehensive Experience Fragment management system\",
           \"summary\": \"Implements full lifecycle support for Experience Fragments (XFs), including create, retrieve, update, and page integration operations. Adds a unified agent tool, rich CLI interface, and tight AEM manager integration with tenant-specific configuration support.\",
           \"description\": \"### Core Capabilities\\n\\n* Unified `manage_experience_fragments` tool with four key operations:\\n  * `create`: Create new XFs with optional initial content\\n  * `get`: Retrieve existing XF data\\n  * `update`: Modify XF content\\n  * `add_to_page`: Inject XF references into pages with flexible positioning\\n\\n* AEM manager integration with `createExperienceFragment` and `populateExperienceFragment`\\n* Support for tenant-specific `experienceFragmentComponentType` configuration\\n\\n###  Technical Details\\n\\n* Secure CSRF token handling for all operations\\n* XF page structure conversion for accurate population\\n* AEM 6.5 vs AEM Cloud component type detection\\n* Unique XF name generation with randomized suffixes\\n* Comprehensive validation and error handling\\n* State change logging for operational observability\\n\\n### 🖥 CLI Tooling\\n\\n* New command-line script with full XF management\\n* Commands: `create`, `update`, `list`, `get`, `delete`, `search`, `info`\\n* Content file input/output support\\n* XF discovery and metadata analysis tools\",

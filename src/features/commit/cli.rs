@@ -9,8 +9,12 @@ use crate::git::GitRepo;
 use crate::tui::run_tui_commit;
 use crate::ui::{self, SpinnerState};
 
-use std::io::{self, Write};
-use std::time::Duration;
+use anyhow::{Context, Result};
+use std::{
+    io::{self, Write},
+    sync::Arc,
+    time::Duration,
+};
 use tokio::time;
 
 /// Run an async operation with a CLI spinner display
@@ -51,9 +55,6 @@ where
 
     Ok(result?)
 }
-
-use anyhow::{Context, Result};
-use std::sync::Arc;
 
 #[allow(clippy::fn_params_excessive_bools)]
 #[allow(clippy::too_many_lines)]
@@ -201,9 +202,6 @@ pub async fn handle_pr_command(
     from: Option<String>,
     to: Option<String>,
 ) -> Result<()> {
-    // Validate parameter combinations
-    validate_pr_parameters(from.as_ref(), to.as_ref());
-
     let mut config = Config::load()?;
     common.apply_to_config(&mut config)?;
 
@@ -217,18 +215,6 @@ pub async fn handle_pr_command(
     println!("{}", format_pull_request(&pr_description));
 
     Ok(())
-}
-
-/// Validates the parameter combinations for PR command
-fn validate_pr_parameters(_from: Option<&String>, _to: Option<&String>) {
-    // Now that we provide sensible defaults, we only need to validate if the parameters make sense
-    // All combinations are valid:
-    // - from + to: explicit range/branch comparison
-    // - from only: from..HEAD
-    // - to only: main..to
-    // - none: main..HEAD (caught earlier, but handled gracefully)
-
-    // No validation errors needed - all combinations are handled
 }
 
 /// Sets up the PR service with proper configuration

@@ -87,10 +87,6 @@ pub enum GitAI {
         #[arg(short, long, help = "Automatically commit with the generated message")]
         auto_commit: bool,
 
-        /// Disable emoji for this commit
-        #[arg(long, help = "Disable emojis for this commit")]
-        no_emoji: bool,
-
         /// Print the generated message to stdout and exit
         #[arg(short, long, help = "Print the generated message to stdout and exit")]
         print: bool,
@@ -247,7 +243,6 @@ Available LLM Providers: {providers_list}"
 #[allow(clippy::struct_excessive_bools)]
 pub struct CmsgConfig {
     pub auto_commit: bool,
-    pub use_emoji: bool,
     pub print_only: bool,
     pub verify: bool,
     pub dry_run: bool,
@@ -261,10 +256,9 @@ pub async fn handle_message(
     repository_url: Option<String>,
 ) -> anyhow::Result<()> {
     debug!(
-        "Handling 'message' command with common: {:?}, auto_commit: {}, use_emoji: {}, print: {}, verify: {}, amend: {}, commit_ref: {:?}",
+        "Handling 'message' command with common: {:?}, auto_commit: {}, print: {}, verify: {}, amend: {}, commit_ref: {:?}",
         common,
         config.auto_commit,
-        config.use_emoji,
         config.print_only,
         config.verify,
         config.amend,
@@ -322,7 +316,6 @@ pub async fn handle_command(command: GitAI, repository_url: Option<String>) -> a
         GitAI::Message {
             common,
             auto_commit,
-            no_emoji,
             print,
             no_verify,
             amend,
@@ -332,7 +325,6 @@ pub async fn handle_command(command: GitAI, repository_url: Option<String>) -> a
                 common,
                 CmsgConfig {
                     auto_commit,
-                    use_emoji: !no_emoji,
                     print_only: print,
                     verify: !no_verify,
                     dry_run: false,
