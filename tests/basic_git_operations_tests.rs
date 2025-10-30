@@ -1,7 +1,9 @@
 use git2::Repository;
 use gitai::core::context::ChangeType;
+use gitai::git::GitRepo;
 use std::fs;
 use std::path::Path;
+use tempfile::TempDir;
 
 // Use our centralized test infrastructure
 #[path = "test_utils.rs"]
@@ -223,4 +225,50 @@ async fn test_binary_file() {
 
     // Check if the status is correct
     assert!(matches!(binary_file.change_type, ChangeType::Added));
+}
+
+#[tokio::test]
+async fn test_fresh_repo_commit_generation() {
+    // Create a fresh git repo without any commits
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
+    let repo = Repository::init(temp_dir.path()).expect("Failed to initialize repository");
+
+    // Configure git user (required for commits)
+    let mut config = repo.config().expect("Failed to get repository config");
+    config
+        .set_str("user.name", "Test User")
+        .expect("Failed to set user name");
+    config
+        .set_str("user.email", "test@example.com")
+        .expect("Failed to set user email");
+
+    // Create and stage a file
+    let initial_file_path = temp_dir.path().join("README.md");
+    fs::write(&initial_file_path, "# Fresh Project").expect("Failed to write initial file");
+
+    let mut index = repo.index().expect("Failed to get repository index");
+    index
+        .add_path(Path::new("README.md"))
+        .expect("Failed to add file to index");
+    index.write().expect("Failed to write index");
+
+    let git_repo = GitRepo::new(temp_dir.path()).expect("Failed to create GitRepo");
+    let config = MockDataBuilder::config();
+
+    // This should work even on a fresh repo with no commits
+    let context = git_repo
+        .get_git_info(&config)
+        .await
+        .expect("Failed to get git info for fresh repo");
+
+    // Verify that recent_commits is empty (no commits yet)
+    assert_eq!(context.recent_commits.len(), 0);
+
+    // Verify that author_history is empty
+    assert_eq!(context.author_history.len(), 0);
+
+    // Verify that staged files are present
+    assert_eq!(context.staged_files.len(), 1);
+    assert_eq!(context.staged_files[0].path, "README.md");
+    assert!(matches!(context.staged_files[0].change_type, ChangeType::Added));
 }

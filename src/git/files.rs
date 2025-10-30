@@ -107,7 +107,13 @@ pub fn get_diff_for_file(repo: &Repository, path: &str) -> Result<String> {
     let mut diff_options = DiffOptions::new();
     diff_options.pathspec(path);
 
-    let tree = Some(repo.head()?.peel_to_tree()?);
+    let tree = match repo.head() {
+        Ok(head) => Some(head.peel_to_tree()?),
+        Err(_) => {
+            // For fresh repos with no HEAD, treat as if comparing against empty tree
+            None
+        }
+    };
 
     let diff = repo.diff_tree_to_workdir_with_index(tree.as_ref(), Some(&mut diff_options))?;
 

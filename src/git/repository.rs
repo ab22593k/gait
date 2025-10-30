@@ -148,15 +148,27 @@ impl GitRepo {
 
     /// Retrieves the current branch name.
     ///
+    /// # Arguments
+    ///
+    /// * `count` - The number of recent commits to retrieve.
+    ///
     /// # Returns
     ///
     /// A Result containing the branch name as a String or an error.
     pub fn get_current_branch(&self) -> Result<String> {
         let repo = self.open_repo()?;
-        let head = repo.head()?;
-        let branch_name = head.shorthand().unwrap_or("HEAD detached").to_string();
-        debug!("Current branch: {}", branch_name);
-        Ok(branch_name)
+        match repo.head() {
+            Ok(head) => {
+                let branch_name = head.shorthand().unwrap_or("HEAD detached").to_string();
+                debug!("Current branch: {}", branch_name);
+                Ok(branch_name)
+            }
+            Err(_) => {
+                // For fresh repos with no commits, default to "main"
+                debug!("No HEAD found (fresh repository), defaulting to 'main'");
+                Ok("main".to_string())
+            }
+        }
     }
 
     /// Executes a Git hook.
@@ -556,7 +568,12 @@ impl GitRepo {
         let repo = self.open_repo()?;
         debug!("Fetching {} recent commits", count);
         let mut revwalk = repo.revwalk()?;
-        revwalk.push_head()?;
+
+        // For fresh repos with no commits, push_head() will fail, so return empty vec
+        if let Err(_) = revwalk.push_head() {
+            debug!("No HEAD found (fresh repository), returning empty recent commits");
+            return Ok(Vec::new());
+        }
 
         let commits = revwalk
             .take(count)
@@ -591,7 +608,12 @@ impl GitRepo {
         let repo = self.open_repo()?;
         debug!("Fetching {} recent commits for author: {}", count, author_email);
         let mut revwalk = repo.revwalk()?;
-        revwalk.push_head()?;
+
+        // For fresh repos with no commits, push_head() will fail, so return empty vec
+        if let Err(_) = revwalk.push_head() {
+            debug!("No HEAD found (fresh repository), returning empty author history");
+            return Ok(Vec::new());
+        }
 
         let commits = revwalk
             .filter_map(|oid| {

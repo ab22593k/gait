@@ -1,9 +1,9 @@
 use crate::core::context::{ChangeType, RecentCommit, StagedFile};
 use crate::git::utils::is_binary_diff;
 use crate::{analyzer};
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use chrono;
-use git2::{FileMode, Repository, Status};
+use git2::{FileMode, Repository};
 use log::debug;
 
 /// Results from a commit operation
@@ -25,10 +25,6 @@ pub struct CommitInfo {
     pub file_paths: Vec<String>,
 }
 
-/// Commits changes to the repository.
-///
-/// # Arguments
-///
 /// Amend a commit with a new message
 ///
 /// # Arguments
@@ -93,29 +89,20 @@ pub fn amend_commit(repo: &Repository, message: &str, commit_ref: &str, is_remot
     let short_hash = commit.id().to_string()[..7].to_string();
 
     let mut files_changed = 0;
-    let mut insertions = 0;
-    let mut deletions = 0;
+    let insertions = 0;
+    let deletions = 0;
     let mut new_files = Vec::new();
 
-    // Calculate diff stats compared to the HEAD commit's parent (or empty tree if no parent)
-    let diff = if let Some(parent) = head_commit.parent(0).ok() {
-        repo.diff_tree_to_tree(Some(&parent.tree()?), Some(&tree), None)?
-    } else {
-        // Initial commit, compare to empty tree
-        let empty_tree = repo.treebuilder(None)?.write()?;
-        let empty_tree = repo.find_tree(empty_tree)?;
-        repo.diff_tree_to_tree(Some(&empty_tree), Some(&tree), None)?
-    };
-
-    diff.print(git2::DiffFormat::NameStatus, |_, _, line| {
-        files_changed += 1;
-        if line.origin() == '+' {
-            insertions += 1;
-        } else if line.origin() == '-' {
-            deletions += 1;
+    // Count staged files for commit stats
+    let statuses = repo.statuses(None)?;
+    for entry in statuses.iter() {
+        if entry.status().contains(git2::Status::INDEX_NEW)
+            || entry.status().contains(git2::Status::INDEX_MODIFIED)
+            || entry.status().contains(git2::Status::INDEX_DELETED)
+        {
+            files_changed += 1;
         }
-        true
-    })?;
+    }
 
     let statuses = repo.statuses(None)?;
 
@@ -154,53 +141,90 @@ pub fn commit(repo: &Repository, message: &str, is_remote: bool) -> Result<Commi
     }
 
     let signature = repo.signature()?;
+
     let mut index = repo.index()?;
-    let tree_id = index.write_tree()?;
-    let tree = repo.find_tree(tree_id)?;
-    let parent_commit = repo.head()?.peel_to_commit()?;
-    let commit_oid = repo.commit(
-        Some("HEAD"),
-        &signature,
-        &signature,
-        message,
-        &tree,
-        &[&parent_commit],
-    )?;
 
-    let branch_name = repo.head()?.shorthand().unwrap_or("HEAD").to_string();
-    let commit = repo.find_commit(commit_oid)?;
-    let short_hash = commit.id().to_string()[..7].to_string();
-
+    // Count staged files BEFORE the commit by comparing index with HEAD
     let mut files_changed = 0;
-    let mut insertions = 0;
-    let mut deletions = 0;
+    let insertions = 0;
+    let deletions = 0;
     let mut new_files = Vec::new();
 
-    let diff = repo.diff_tree_to_tree(Some(&parent_commit.tree()?), Some(&tree), None)?;
+    // Get HEAD tree for comparison
+    let head_tree = if let Ok(head) = repo.head() {
+        Some(head.peel_to_commit()?.tree()?)
+    } else {
+        None
+    };
 
-    diff.print(git2::DiffFormat::NameStatus, |_, _, line| {
-        files_changed += 1;
-        if line.origin() == '+' {
-            insertions += 1;
-        } else if line.origin() == '-' {
-            deletions += 1;
-        }
-        true
-    })?;
+    // Compare each index entry with HEAD
+    for entry in index.iter() {
+        let path_str = std::str::from_utf8(&entry.path)?;
+        let path = std::path::Path::new(path_str);
 
-    let statuses = repo.statuses(None)?;
-    for entry in statuses.iter() {
-        if entry.status().contains(Status::INDEX_NEW) {
-            new_files.push((
-                entry.path().context("Could not get path")?.to_string(),
-                entry
-                    .index_to_workdir()
-                    .context("Could not get index to workdir")?
-                    .new_file()
-                    .mode(),
-            ));
+        let is_changed = if let Some(ref head_tree) = head_tree {
+            // Check if file exists in HEAD
+            match head_tree.get_path(path) {
+                Ok(head_entry) => {
+                    // File exists in HEAD, check if different
+                    let head_oid = head_entry.id();
+                    head_oid != entry.id
+                }
+                Err(_) => {
+                    // File doesn't exist in HEAD, so it's new
+                    true
+                }
+            }
+        } else {
+            // Fresh repo, all files are new
+            true
+        };
+
+        if is_changed {
+            files_changed += 1;
+            // For new files, check if it's actually new
+            if let Some(ref head_tree) = head_tree {
+                if head_tree.get_path(path).is_err() {
+                    new_files.push((path_str.to_string(), FileMode::Blob));
+                }
+            } else {
+                new_files.push((path_str.to_string(), FileMode::Blob));
+            }
+
         }
     }
+
+    let tree_id = index.write_tree()?;
+    let tree = repo.find_tree(tree_id)?;
+
+    // Handle fresh repositories (no HEAD) vs existing repositories
+    let (commit_oid, branch_name) = if let Ok(head) = repo.head() {
+        // Existing repository with HEAD
+        let parent_commit = head.peel_to_commit()?;
+        let commit_oid = repo.commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            message,
+            &tree,
+            &[&parent_commit],
+        )?;
+        (commit_oid, head.shorthand().unwrap_or("HEAD").to_string())
+    } else {
+        // Fresh repository - create initial commit with no parents
+        let commit_oid = repo.commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            message,
+            &tree,
+            &[],
+        )?;
+        (commit_oid, "main".to_string())
+    };
+
+    let commit = repo.find_commit(commit_oid)?;
+    let short_hash = commit.id().to_string()[..7].to_string();
 
     Ok(CommitResult {
         branch: branch_name,
