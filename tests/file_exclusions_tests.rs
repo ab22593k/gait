@@ -80,8 +80,11 @@ async fn test_get_git_info_with_excluded_files() {
         "console.log('excluded');",
     )
     .expect("Failed to write excluded file");
-    fs::write(temp_dir.path().join(".gitignore"), "node_modules/\npackage-lock.json")
-        .expect("Failed to write .gitignore");
+    fs::write(
+        temp_dir.path().join(".gitignore"),
+        "node_modules/\npackage-lock.json",
+    )
+    .expect("Failed to write .gitignore");
     fs::write(
         temp_dir.path().join("package-lock.json"),
         r#"{"name": "test-package"}"#,
@@ -127,7 +130,6 @@ async fn test_get_git_info_with_excluded_files() {
 
     for file in &excluded_files {
         assert_eq!(file.diff, "[Content excluded]");
-        assert_eq!(file.analysis, vec!["[Analysis excluded]"]);
     }
 
     // Check included file
@@ -142,7 +144,6 @@ async fn test_get_git_info_with_excluded_files() {
 
     for file in &included_files {
         assert_ne!(file.diff, "[Content excluded]");
-        assert_ne!(file.analysis, vec!["[Analysis excluded]"]);
     }
 }
 
@@ -212,7 +213,6 @@ async fn test_multiple_staged_files_with_exclusions() {
     for file in &excluded_files {
         assert!(file.path.contains(".vscode") || file.path.contains(".min.js"));
         assert_eq!(file.diff, "[Content excluded]");
-        assert_eq!(file.analysis, vec!["[Analysis excluded]"]);
     }
 
     for file in &included_files {
@@ -221,10 +221,9 @@ async fn test_multiple_staged_files_with_exclusions() {
                 && std::path::Path::new(&file.path)
                     .extension()
                     .is_some_and(|ext| ext.eq_ignore_ascii_case("txt")))
-            || file.path == ".gitignore"
+                || file.path == ".gitignore"
         );
         assert_ne!(file.diff, "[Content excluded]");
-        assert_ne!(file.analysis, vec!["[Analysis excluded]"]);
     }
 }
 
@@ -246,10 +245,8 @@ async fn test_nested_gitignore_files() {
         .expect("Failed to write src/.gitignore");
 
     // Create files that should be excluded by different gitignores
-    fs::write(temp_dir.path().join("debug.log"), "debug info")
-        .expect("Failed to write debug.log");
-    fs::write(temp_dir.path().join("test.txt"), "test content")
-        .expect("Failed to write test.txt");
+    fs::write(temp_dir.path().join("debug.log"), "debug info").expect("Failed to write debug.log");
+    fs::write(temp_dir.path().join("test.txt"), "test content").expect("Failed to write test.txt");
     fs::write(temp_dir.path().join("src/temp.dat"), "temp data")
         .expect("Failed to write src/temp.dat");
     fs::write(temp_dir.path().join("src/subdir/temp.txt"), "nested temp")

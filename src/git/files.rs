@@ -1,12 +1,12 @@
-use crate::analyzer;
-use crate::analyzer::GitIgnoreMatcher;
 use crate::core::context::{ChangeType, RecentCommit, StagedFile};
 use crate::git::utils::is_binary_diff;
 use anyhow::{Context, Result};
 use git2::{DiffOptions, Repository, StatusOptions};
+use log::debug;
 use std::fs;
 use std::path::Path;
-use log::debug;
+
+use super::ignore_matcher::GitIgnoreMatcher;
 
 /// Collects repository information about files and branches
 #[derive(Debug)]
@@ -27,7 +27,10 @@ pub struct RepoFilesInfo {
 /// # Returns
 ///
 /// A Result containing a Vec of `StagedFile` objects or an error.
-pub fn get_file_statuses(repo: &Repository, gitignore_matcher: &GitIgnoreMatcher) -> Result<Vec<StagedFile>> {
+pub fn get_file_statuses(
+    repo: &Repository,
+    gitignore_matcher: &GitIgnoreMatcher,
+) -> Result<Vec<StagedFile>> {
     debug!("Getting file statuses");
     let mut staged_files = Vec::new();
 
@@ -42,18 +45,18 @@ pub fn get_file_statuses(repo: &Repository, gitignore_matcher: &GitIgnoreMatcher
         if status.is_index_new() || status.is_index_modified() || status.is_index_deleted() {
             let change_type = if status.is_index_new() {
                 ChangeType::Added
-             } else if status.is_index_modified() {
-                 ChangeType::Modified
-             } else {
-                 ChangeType::Deleted
-             };
+            } else if status.is_index_modified() {
+                ChangeType::Modified
+            } else {
+                ChangeType::Deleted
+            };
 
-             let should_exclude = gitignore_matcher.should_exclude(path);
-             let diff = if should_exclude {
-                 String::from("[Content excluded]")
-             } else {
-                 get_diff_for_file(repo, path)?
-             };
+            let should_exclude = gitignore_matcher.should_exclude(path);
+            let diff = if should_exclude {
+                String::from("[Content excluded]")
+            } else {
+                get_diff_for_file(repo, path)?
+            };
 
             let content =
                 if should_exclude || change_type != ChangeType::Modified || is_binary_diff(&diff) {
@@ -67,27 +70,10 @@ pub fn get_file_statuses(repo: &Repository, gitignore_matcher: &GitIgnoreMatcher
                     }
                 };
 
-            let analyzer = analyzer::get_analyzer(path);
-            let staged_file = StagedFile {
-                path: path.to_string(),
-                change_type: change_type.clone(),
-                diff: diff.clone(),
-                analysis: Vec::new(),
-                content: content.clone(),
-                content_excluded: should_exclude,
-            };
-
-            let analysis = if should_exclude {
-                vec!["[Analysis excluded]".to_string()]
-            } else {
-                analyzer.analyze(path, &staged_file)
-            };
-
             staged_files.push(StagedFile {
                 path: path.to_string(),
                 change_type,
                 diff,
-                analysis,
                 content,
                 content_excluded: should_exclude,
             });
@@ -147,7 +133,10 @@ pub fn get_diff_for_file(repo: &Repository, path: &str) -> Result<String> {
 /// # Returns
 ///
 /// A Result containing a Vec of `StagedFile` objects for unstaged changes or an error.
-pub fn get_unstaged_file_statuses(repo: &Repository, gitignore_matcher: &GitIgnoreMatcher) -> Result<Vec<StagedFile>> {
+pub fn get_unstaged_file_statuses(
+    repo: &Repository,
+    gitignore_matcher: &GitIgnoreMatcher,
+) -> Result<Vec<StagedFile>> {
     debug!("Getting unstaged file statuses");
     let mut unstaged_files = Vec::new();
 
@@ -165,12 +154,12 @@ pub fn get_unstaged_file_statuses(repo: &Repository, gitignore_matcher: &GitIgno
                 ChangeType::Added
             } else if status.is_wt_modified() {
                 ChangeType::Modified
-             } else {
-                 ChangeType::Deleted
-             };
+            } else {
+                ChangeType::Deleted
+            };
 
-             let should_exclude = gitignore_matcher.should_exclude(path);
-             let diff = if should_exclude {
+            let should_exclude = gitignore_matcher.should_exclude(path);
+            let diff = if should_exclude {
                 String::from("[Content excluded]")
             } else {
                 get_diff_for_unstaged_file(repo, path)?
@@ -188,27 +177,10 @@ pub fn get_unstaged_file_statuses(repo: &Repository, gitignore_matcher: &GitIgno
                     }
                 };
 
-            let analyzer = analyzer::get_analyzer(path);
-            let unstaged_file = StagedFile {
-                path: path.to_string(),
-                change_type: change_type.clone(),
-                diff: diff.clone(),
-                analysis: Vec::new(),
-                content: content.clone(),
-                content_excluded: should_exclude,
-            };
-
-            let analysis = if should_exclude {
-                vec!["[Analysis excluded]".to_string()]
-            } else {
-                analyzer.analyze(path, &unstaged_file)
-            };
-
             unstaged_files.push(StagedFile {
                 path: path.to_string(),
                 change_type,
                 diff,
-                analysis,
                 content,
                 content_excluded: should_exclude,
             });

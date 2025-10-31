@@ -2,7 +2,7 @@ use super::relevance::RelevanceScorer;
 use super::types::GeneratedMessage;
 use crate::common::get_combined_instructions;
 use crate::config::Config;
-use crate::core::context::{ChangeType, CommitContext, ProjectMetadata, RecentCommit, StagedFile};
+use crate::core::context::{ChangeType, CommitContext, RecentCommit, StagedFile};
 
 use log::debug;
 use std::collections::HashMap;
@@ -33,7 +33,6 @@ pub fn create_user_prompt(context: &CommitContext) -> String {
 
     let recent_commits = format_recent_commits(&context.recent_commits);
     let staged_changes = format_staged_files(&context.staged_files, &relevance_scores);
-    let project_metadata = format_project_metadata(&context.project_metadata);
     let author_history = format_author_history(&context.author_history);
 
     debug!(
@@ -59,17 +58,11 @@ pub fn create_user_prompt(context: &CommitContext) -> String {
     format!(
         "ANALYZE the provided context,\n\
          including the Branch ({}), Recent Commits ({}),\n\
-         Staged Changes ({}), Project Metadata ({}),\n\
-         and Detailed Changes ({}).\n\n\
+         Staged Changes ({}), and Detailed Changes ({}).\n\
          Specifically, examine the Author's Commit History ({}) to ADAPT the tone,\n\
          style, and formatting of the generated message to ensure strict consistency \
          with the author's previous patterns.\n",
-        context.branch,
-        recent_commits,
-        staged_changes,
-        project_metadata,
-        detailed_changes,
-        author_history
+        context.branch, recent_commits, staged_changes, detailed_changes, author_history
     )
 }
 
@@ -95,15 +88,6 @@ fn format_staged_files(files: &[StagedFile], relevance_scores: &HashMap<String, 
         })
         .collect::<Vec<_>>()
         .join("\n")
-}
-
-fn format_project_metadata(metadata: &ProjectMetadata) -> String {
-    format!(
-        "Language: {}\nFramework: {}\nDependencies: {}",
-        metadata.language.as_deref().unwrap_or("None"),
-        metadata.framework.as_deref().unwrap_or("None"),
-        metadata.dependencies.join(", ")
-    )
 }
 
 fn format_detailed_changes(
@@ -142,11 +126,10 @@ fn format_detailed_changes(
             let relevance = relevance_scores.get(&file.path).unwrap_or(&0.0);
 
             format!(
-                "File: {} (Relevance: {:.2})\nChange Type: {}\nAnalysis:\n{}\n\nDiff:\n{}",
+                "File: {} (Relevance: {:.2})\nChange Type: {}\n\nDiff:\n{}",
                 file.path,
                 relevance,
                 format_change_type(&file.change_type),
-                file.analysis.join("\n"),
                 file.diff
             )
         })
@@ -320,13 +303,11 @@ pub fn create_pr_user_prompt(context: &CommitContext, commit_messages: &[String]
         Commits in this PR:\n{}\n\n\
         Recent commit history:\n{}\n\n\
         File changes summary:\n{}\n\n\
-        Project metadata:\n{}\n\n\
         Detailed changes:\n{}",
         context.branch,
         commits_section,
         format_recent_commits(&context.recent_commits),
         format_staged_files(&context.staged_files, &relevance_scores),
-        format_project_metadata(&context.project_metadata),
         detailed_changes
     );
 

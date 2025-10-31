@@ -53,16 +53,6 @@ fn test_create_user_prompt_includes_staged_changes() {
 }
 
 #[test]
-fn test_create_user_prompt_includes_project_metadata() {
-    let context = create_mock_commit_context();
-    let prompt = create_user_prompt(&context);
-
-    assert!(prompt.contains("Project Metadata"));
-    // Mock metadata should include language
-    assert!(prompt.contains("Rust"));
-}
-
-#[test]
 fn test_create_user_prompt_includes_detailed_changes() {
     let context = create_mock_commit_context();
     let prompt = create_user_prompt(&context);
@@ -125,12 +115,6 @@ fn test_user_prompt_context_elements_are_properly_formatted() {
         assert!(prompt.contains("(2.00)")); // Relevance score
     }
 
-    // Test project metadata formatting
-    assert!(prompt.contains("Project Metadata ("));
-    assert!(prompt.contains("Language:"));
-    assert!(prompt.contains("Framework:"));
-    assert!(prompt.contains("Dependencies:"));
-
     // Test detailed changes formatting
     assert!(prompt.contains("Detailed Changes ("));
     assert!(prompt.contains("CHANGE SUMMARY"));
@@ -160,5 +144,5 @@ fn test_combined_prompt_structure_for_llm() {
 
     // Sanity check exact prompt lengths
     assert_eq!(system_prompt.len(), 1003);
-    assert_eq!(user_prompt.len(), 722);
+    assert_eq!(user_prompt.len(), 621);
 }

@@ -8,7 +8,6 @@ pub struct CommitContext {
     pub branch: String,
     pub recent_commits: Vec<RecentCommit>,
     pub staged_files: Vec<StagedFile>,
-    pub project_metadata: ProjectMetadata,
     pub user_name: String,
     pub user_email: String,
     pub author_history: Vec<String>,
@@ -27,7 +26,6 @@ pub struct StagedFile {
     pub path: String,
     pub change_type: ChangeType,
     pub diff: String,
-    pub analysis: Vec<String>,
     pub content: Option<String>,
     pub content_excluded: bool,
 }
@@ -46,40 +44,6 @@ impl fmt::Display for ChangeType {
             Self::Modified => write!(f, "Modified"),
             Self::Deleted => write!(f, "Deleted"),
         }
-    }
-}
-
-#[derive(Serialize, Debug, Clone, Default)]
-pub struct ProjectMetadata {
-    pub language: Option<String>,
-    pub framework: Option<String>,
-    pub dependencies: Vec<String>,
-    pub version: Option<String>,
-    pub build_system: Option<String>,
-    pub test_framework: Option<String>,
-    pub plugins: Vec<String>,
-}
-
-impl ProjectMetadata {
-    pub fn merge(&mut self, new: ProjectMetadata) {
-        if let Some(new_lang) = new.language {
-            match &mut self.language {
-                Some(lang) if !lang.contains(&new_lang) => {
-                    lang.push_str(", ");
-                    lang.push_str(&new_lang);
-                }
-                None => self.language = Some(new_lang),
-                _ => {}
-            }
-        }
-        self.dependencies.extend(new.dependencies.clone());
-        self.framework = self.framework.take().or(new.framework);
-        self.version = self.version.take().or(new.version);
-        self.build_system = self.build_system.take().or(new.build_system);
-        self.test_framework = self.test_framework.take().or(new.test_framework);
-        self.plugins.extend(new.plugins);
-        self.dependencies.sort();
-        self.dependencies.dedup();
     }
 }
 
@@ -162,7 +126,6 @@ impl CommitContext {
         branch: String,
         recent_commits: Vec<RecentCommit>,
         staged_files: Vec<StagedFile>,
-        project_metadata: ProjectMetadata,
         user_name: String,
         user_email: String,
         author_history: Vec<String>,
@@ -171,7 +134,6 @@ impl CommitContext {
             branch,
             recent_commits,
             staged_files,
-            project_metadata,
             user_name,
             user_email,
             author_history,

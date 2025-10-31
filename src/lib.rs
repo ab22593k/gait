@@ -1,4 +1,3 @@
-pub mod analyzer;
 pub mod app;
 pub mod common;
 pub mod config;
@@ -18,8 +17,8 @@ pub use ::llm::LLMProvider;
 pub use core::context::FixedSizeBuffer;
 
 // Re-exports from the new types organization
-pub use features::commit::{
-    types::{GeneratedMessage, GeneratedPullRequest, format_commit_message, format_pull_request},
+pub use features::commit::types::{
+    GeneratedMessage, GeneratedPullRequest, format_commit_message, format_pull_request,
 };
 
 // Re-exports from wire

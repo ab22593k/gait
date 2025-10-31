@@ -1,7 +1,7 @@
 use git2::Repository;
 use gitai::{
     config::{Config, ProviderConfig},
-    core::context::{ChangeType, CommitContext, ProjectMetadata, RecentCommit, StagedFile},
+    core::context::{ChangeType, CommitContext, RecentCommit, StagedFile},
     features::{
         changelog::{
             change_analyzer::{AnalyzedChange, FileChange},
@@ -314,7 +314,6 @@ impl MockDataBuilder {
                 timestamp: "1234567890".to_string(),
             }],
             staged_files: vec![Self::staged_file()],
-            project_metadata: Self::project_metadata(),
             user_name: "Test User".to_string(),
             user_email: "test@example.com".to_string(),
             author_history: vec!["feat: add user authentication".to_string()],
@@ -344,7 +343,6 @@ impl MockDataBuilder {
                     path: "src/auth/middleware.rs".to_string(),
                     change_type: ChangeType::Added,
                     diff: "+ use jwt::encode;\n+ pub fn auth_middleware() -> impl Filter<Extract = (), Error = Rejection> + Clone {".to_string(),
-                    analysis: vec!["New authentication middleware".to_string()],
                     content: Some("use jwt::encode;\n\npub fn auth_middleware() -> impl Filter {}".to_string()),
                     content_excluded: false,
                 },
@@ -352,20 +350,12 @@ impl MockDataBuilder {
                     path: "src/auth/models.rs".to_string(),
                     change_type: ChangeType::Added,
                     diff: "+ #[derive(Serialize, Deserialize)]\n+ pub struct User {".to_string(),
-                    analysis: vec!["New User model with authentication fields".to_string()],
                     content: Some("#[derive(Serialize, Deserialize)]\npub struct User {\n    pub id: u32,\n    pub email: String,\n}".to_string()),
                     content_excluded: false,
                 },
             ],
-            project_metadata: ProjectMetadata {
-                language: Some("Rust".to_string()),
-                framework: Some("Warp".to_string()),
-                dependencies: vec!["serde".to_string(), "jwt".to_string(), "bcrypt".to_string()],
-                version: None,
-                build_system: None,
-                test_framework: None,
-                plugins: vec![],
-            },
+
+
             user_name: "Test User".to_string(),
             user_email: "test@example.com".to_string(),
             author_history: vec![
@@ -381,24 +371,17 @@ impl MockDataBuilder {
             path: "file1.rs".to_string(),
             change_type: ChangeType::Modified,
             diff: "- old line\n+ new line".to_string(),
-            analysis: vec!["Modified function: main".to_string()],
             content: None,
             content_excluded: false,
         }
     }
 
     /// Create a mock `StagedFile` with specific properties
-    pub fn staged_file_with(
-        path: &str,
-        change_type: ChangeType,
-        diff: &str,
-        analysis: Vec<String>,
-    ) -> StagedFile {
+    pub fn staged_file_with(path: &str, change_type: ChangeType, diff: &str) -> StagedFile {
         StagedFile {
             path: path.to_string(),
             change_type,
             diff: diff.to_string(),
-            analysis,
             content: None,
             content_excluded: false,
         }
@@ -406,37 +389,7 @@ impl MockDataBuilder {
 
     /// Create a mock `StagedFile` for analysis testing (empty analysis initially)
     pub fn staged_file_for_analysis(path: &str, change_type: ChangeType, diff: &str) -> StagedFile {
-        Self::staged_file_with(path, change_type, diff, Vec::new())
-    }
-
-    /// Create a mock `ProjectMetadata`
-    pub fn project_metadata() -> ProjectMetadata {
-        ProjectMetadata {
-            language: Some("Rust".to_string()),
-            framework: None,
-            dependencies: vec![],
-            version: None,
-            build_system: None,
-            test_framework: None,
-            plugins: vec![],
-        }
-    }
-
-    /// Create a mock `ProjectMetadata` with specific properties
-    pub fn project_metadata_with(
-        language: Option<String>,
-        framework: Option<String>,
-        dependencies: Vec<String>,
-    ) -> ProjectMetadata {
-        ProjectMetadata {
-            language,
-            framework,
-            dependencies,
-            version: None,
-            build_system: None,
-            test_framework: None,
-            plugins: vec![],
-        }
+        Self::staged_file_with(path, change_type, diff)
     }
 
     /// Create a mock Config

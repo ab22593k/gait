@@ -37,12 +37,6 @@ async fn test_get_git_info() {
     // Test staged files (should be empty after commit)
     assert_eq!(context.staged_files.len(), 0);
 
-    // Test project metadata
-    assert_eq!(
-        context.project_metadata.language,
-        Some("Unknown".to_string())
-    );
-
     // Create and stage a new file using helper
     let helper = GitTestHelper::new(&temp_dir).expect("Failed to create GitTestHelper");
     helper
@@ -270,5 +264,8 @@ async fn test_fresh_repo_commit_generation() {
     // Verify that staged files are present
     assert_eq!(context.staged_files.len(), 1);
     assert_eq!(context.staged_files[0].path, "README.md");
-    assert!(matches!(context.staged_files[0].change_type, ChangeType::Added));
+    assert!(matches!(
+        context.staged_files[0].change_type,
+        ChangeType::Added
+    ));
 }

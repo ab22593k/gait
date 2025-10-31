@@ -1,10 +1,8 @@
-use crate::analyzer::GitIgnoreMatcher;
 use crate::config::Config;
-use crate::core::context::{CommitContext, ProjectMetadata, RecentCommit, StagedFile};
+use crate::core::context::{CommitContext, RecentCommit, StagedFile};
 
 use crate::git::commit::{self, CommitResult};
 use crate::git::files::{RepoFilesInfo, get_file_statuses, get_unstaged_file_statuses};
-use crate::git::metadata;
 use crate::git::utils::is_inside_work_tree;
 use anyhow::{Context as AnyhowContext, Result, anyhow};
 use git2::{Repository, Tree};
@@ -12,9 +10,11 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+use log::debug;
 use tempfile::TempDir;
 use url::Url;
-use log::debug;
+
+use super::ignore_matcher::GitIgnoreMatcher;
 
 /// Represents a Git repository and provides methods for interacting with it.
 pub struct GitRepo {
@@ -356,20 +356,6 @@ impl GitRepo {
         get_unstaged_file_statuses(&repo, &self.gitignore_matcher)
     }
 
-    /// Retrieves project metadata for changed files.
-    ///
-    /// # Arguments
-    ///
-    /// * `changed_files` - A slice of Strings representing the changed file paths.
-    ///
-    /// # Returns
-    ///
-    /// A Result containing the `ProjectMetadata` or an error.
-    pub async fn get_project_metadata(&self, changed_files: &[String]) -> Result<ProjectMetadata> {
-        // Default batch size of 10 files at a time to limit concurrency
-        metadata::extract_project_metadata(changed_files, 10, &self.gitignore_matcher).await
-    }
-
     /// Helper method for creating `CommitContext`
     ///
     /// # Arguments
@@ -387,7 +373,6 @@ impl GitRepo {
         branch: String,
         recent_commits: Vec<RecentCommit>,
         staged_files: Vec<StagedFile>,
-        project_metadata: ProjectMetadata,
     ) -> Result<CommitContext> {
         // Get user info
         let repo = self.open_repo()?;
@@ -402,7 +387,6 @@ impl GitRepo {
             branch,
             recent_commits,
             staged_files,
-            project_metadata,
             user_name,
             user_email,
             author_history,
@@ -427,17 +411,8 @@ impl GitRepo {
         let recent_commits = self.get_recent_commits(5)?;
         let staged_files = get_file_statuses(&repo, &self.gitignore_matcher)?;
 
-        let changed_files: Vec<String> =
-            staged_files.iter().map(|file| file.path.clone()).collect();
-
-        debug!("Changed files for metadata extraction: {:?}", changed_files);
-
-        // Get project metadata (async operation)
-        let project_metadata = self.get_project_metadata(&changed_files).await?;
-        debug!("Extracted project metadata: {:?}", project_metadata);
-
         // Create and return the context
-        self.create_commit_context(branch, recent_commits, staged_files, project_metadata)
+        self.create_commit_context(branch, recent_commits, staged_files)
     }
 
     /// Get Git information including unstaged changes
@@ -460,15 +435,11 @@ impl GitRepo {
         // Extract all git2 data before crossing async boundaries
         let files_info = self.extract_files_info(include_unstaged)?;
 
-        // Now perform async operations
-        let project_metadata = self.get_project_metadata(&files_info.file_paths).await?;
-
         // Create and return the context
         self.create_commit_context(
             files_info.branch,
             files_info.recent_commits,
             files_info.staged_files,
-            project_metadata,
         )
     }
 
@@ -496,22 +467,23 @@ impl GitRepo {
         let repo = self.open_repo()?;
 
         // Extract branch diff info
-        let (display_branch, recent_commits, file_paths) =
-            commit::extract_branch_diff_info(&repo, base_branch, target_branch, &self.gitignore_matcher)?;
+        let (display_branch, recent_commits, _) = commit::extract_branch_diff_info(
+            &repo,
+            base_branch,
+            target_branch,
+            &self.gitignore_matcher,
+        )?;
 
         // Get the actual file changes
-        let branch_files = commit::get_branch_diff_files(&repo, base_branch, target_branch, &self.gitignore_matcher)?;
-
-        // Get project metadata with async operations
-        let project_metadata = self.get_project_metadata(&file_paths).await?;
+        let branch_files = commit::get_branch_diff_files(
+            &repo,
+            base_branch,
+            target_branch,
+            &self.gitignore_matcher,
+        )?;
 
         // Create and return the context
-        self.create_commit_context(
-            display_branch,
-            recent_commits,
-            branch_files,
-            project_metadata,
-        )
+        self.create_commit_context(display_branch, recent_commits, branch_files)
     }
 
     /// Get Git information for a commit range (for PR descriptions)
@@ -535,17 +507,14 @@ impl GitRepo {
         let repo = self.open_repo()?;
 
         // Extract commit range info
-        let (display_range, recent_commits, file_paths) =
+        let (display_range, recent_commits, _) =
             commit::extract_commit_range_info(&repo, from, to, &self.gitignore_matcher)?;
 
         // Get the actual file changes
         let range_files = commit::get_commit_range_files(&repo, from, to, &self.gitignore_matcher)?;
 
-        // Get project metadata with async operations
-        let project_metadata = self.get_project_metadata(&file_paths).await?;
-
         // Create and return the context
-        self.create_commit_context(display_range, recent_commits, range_files, project_metadata)
+        self.create_commit_context(display_range, recent_commits, range_files)
     }
 
     /// Get commits for PR description between two references
@@ -609,9 +578,16 @@ impl GitRepo {
     /// # Returns
     ///
     /// A Result containing a Vec of commit message strings or an error.
-    pub fn get_author_commit_history(&self, author_email: &str, count: usize) -> Result<Vec<String>> {
+    pub fn get_author_commit_history(
+        &self,
+        author_email: &str,
+        count: usize,
+    ) -> Result<Vec<String>> {
         let repo = self.open_repo()?;
-        debug!("Fetching {} recent commits for author: {}", count, author_email);
+        debug!(
+            "Fetching {} recent commits for author: {}",
+            count, author_email
+        );
         let mut revwalk = repo.revwalk()?;
 
         // For fresh repos with no commits, push_head() will fail, so return empty vec
@@ -643,7 +619,11 @@ impl GitRepo {
             .take(count) // Take only the required number of commits
             .collect::<Result<Vec<_>>>()?;
 
-        debug!("Retrieved {} commits for author {}", commits.len(), author_email);
+        debug!(
+            "Retrieved {} commits for author {}",
+            commits.len(),
+            author_email
+        );
         Ok(commits)
     }
 
@@ -702,19 +682,11 @@ impl GitRepo {
         // Extract commit info
         let commit_info = commit::extract_commit_info(&repo, commit_id, &branch)?;
 
-        // Now get metadata with async operations
-        let project_metadata = self.get_project_metadata(&commit_info.file_paths).await?;
-
         // Get the files from commit after async boundary
         let commit_files = commit::get_commit_files(&repo, commit_id, &self.gitignore_matcher)?;
 
         // Create and return the context
-        self.create_commit_context(
-            commit_info.branch,
-            vec![commit_info.commit],
-            commit_files,
-            project_metadata,
-        )
+        self.create_commit_context(commit_info.branch, vec![commit_info.commit], commit_files)
     }
 
     /// Get the commit date for a reference
@@ -748,8 +720,6 @@ impl GitRepo {
         let repo = self.open_repo()?;
         commit::amend_commit(&repo, message, commit_ref, self.is_remote)
     }
-
-
 
     /// Check if inside a working tree
     pub fn is_inside_work_tree() -> Result<bool> {

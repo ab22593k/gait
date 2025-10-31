@@ -1,4 +1,4 @@
-use gitai::core::context::{ChangeType, CommitContext, ProjectMetadata, RecentCommit, StagedFile};
+use gitai::core::context::{ChangeType, CommitContext, RecentCommit, StagedFile};
 use gitai::core::token_optimizer::TokenOptimizer;
 
 // Use our centralized test infrastructure
@@ -26,7 +26,6 @@ fn create_test_context() -> CommitContext {
             path: "file1.rs".to_string(),
             change_type: ChangeType::Modified,
             diff: "- Old line\n+ New line".to_string(),
-            analysis: vec!["Modified function: test_function".to_string()],
             content_excluded: false,
             content: Some("Full content of file1.rs".to_string()),
         },
@@ -34,7 +33,6 @@ fn create_test_context() -> CommitContext {
             path: "file2.rs".to_string(),
             change_type: ChangeType::Added,
             diff: "+ New file content".to_string(),
-            analysis: vec!["Added new struct: TestStruct".to_string()],
             content_excluded: false,
             content: Some("Full content of file2.rs".to_string()),
         },
@@ -251,7 +249,6 @@ fn create_test_context_with_large_data() -> CommitContext {
                 path: "file1.rs".to_string(),
                 change_type: ChangeType::Modified,
                 diff: large_diff.clone(),
-                analysis: vec!["Modified function: test_function".to_string()],
                 content_excluded: false,
                 content: Some(large_content.clone()),
             },
@@ -259,20 +256,11 @@ fn create_test_context_with_large_data() -> CommitContext {
                 path: "file2.rs".to_string(),
                 change_type: ChangeType::Added,
                 diff: large_diff,
-                analysis: vec!["Added new struct: TestStruct".to_string()],
                 content_excluded: false,
                 content: Some(large_content),
             },
         ],
-        project_metadata: ProjectMetadata {
-            language: Some("Rust".to_string()),
-            framework: None,
-            dependencies: vec![],
-            version: Some("0.1.0".to_string()),
-            build_system: Some("Cargo".to_string()),
-            test_framework: None,
-            plugins: vec![],
-        },
+
         user_name: "Test User".to_string(),
         user_email: "test@example.com".to_string(),
         author_history: vec![
