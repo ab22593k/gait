@@ -1,7 +1,11 @@
 use serde::Serialize;
+use std::collections::HashMap;
 use std::fmt;
 
+
+use crate::core::semantic_similarity::SemanticSimilarity;
 use crate::core::token_optimizer::TokenOptimizer;
+use crate::Config;
 
 #[derive(Serialize, Debug, Clone)]
 pub struct CommitContext {
@@ -140,13 +144,85 @@ impl CommitContext {
         }
     }
 
-    pub fn optimize(&mut self, max_tokens: usize) {
-        let optimizer = TokenOptimizer::new(max_tokens).expect(
+    pub async fn optimize(&mut self, max_tokens: usize, config: &Config) {
+        let optimizer = TokenOptimizer::new(max_tokens, config.clone()).expect(
             "Failed to initialize token optimizer. Ensure the tokenizer data is available.",
         );
 
-        let _ = optimizer.optimize_context(self);
+        let _ = optimizer.optimize_context(self).await;
     }
+
+    /// Get semantically similar historical commits based on current changes
+    pub fn get_similar_history(&self, max_similar: usize) -> Vec<String> {
+        if self.author_history.is_empty() {
+            return Vec::new();
+        }
+
+        let similarity_calculator = SemanticSimilarity::new();
+        let change_keywords = similarity_calculator.extract_keywords(&self.staged_files);
+        let similarities = similarity_calculator.calculate_similarities(&change_keywords, &self.author_history);
+
+        similarities
+            .into_iter()
+            .take(max_similar)
+            .map(|(idx, _)| self.author_history[idx].clone())
+            .collect()
+    }
+
+
+
+    /// Detect common commit message conventions from history
+    pub fn detect_conventions(&self) -> HashMap<String, usize> {
+        let mut conventions = HashMap::new();
+
+        for msg in &self.author_history {
+            if let Some(first_word) = msg.split_whitespace().next() {
+                // Check for conventional commit patterns
+                if first_word.ends_with(':') {
+                    let convention = first_word.to_lowercase();
+                    *conventions.entry(convention).or_insert(0) += 1;
+                }
+                // Check for imperative verbs
+                else if is_imperative_verb(first_word) {
+                    *conventions.entry("imperative".to_string()).or_insert(0) += 1;
+                }
+            }
+        }
+
+        conventions
+    }
+
+    /// Get enhanced author history with semantic filtering
+    pub fn get_enhanced_history(&self, max_history: usize) -> Vec<String> {
+        let similar_history = self.get_similar_history(max_history / 2);
+        let mut enhanced_history = similar_history;
+
+        // Add some recent history for recency
+        let recent_count = (max_history / 2).min(self.author_history.len());
+        for i in 0..recent_count {
+            if let Some(msg) = self.author_history.get(i) {
+                if !enhanced_history.contains(msg) {
+                    enhanced_history.push(msg.clone());
+                }
+            }
+        }
+
+        enhanced_history.truncate(max_history);
+        enhanced_history
+    }
+}
+
+
+
+/// Check if a word is an imperative verb commonly used in commit messages
+fn is_imperative_verb(word: &str) -> bool {
+    let imperative_verbs = [
+        "add", "update", "fix", "remove", "refactor", "improve", "change", "modify",
+        "create", "delete", "merge", "revert", "implement", "optimize", "clean",
+        "rename", "move", "extract", "introduce", "enhance", "simplify", "document",
+    ];
+
+    imperative_verbs.contains(&word.to_lowercase().as_str())
 }
 
 #[cfg(test)]

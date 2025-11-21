@@ -1,10 +1,11 @@
-use crate::{core::context::CommitContext};
+use crate::{core::context::CommitContext, config::Config};
 use tiktoken_rs::cl100k_base;
 use log::debug;
 
 pub struct TokenOptimizer {
     encoder: tiktoken_rs::CoreBPE,
     max_tokens: usize,
+    config: Config,
 }
 
 #[derive(Debug)]
@@ -27,20 +28,32 @@ impl std::fmt::Display for TokenError {
 impl std::error::Error for TokenError {}
 
 impl TokenOptimizer {
-    pub fn new(max_tokens: usize) -> Result<Self, TokenError> {
+    pub fn new(max_tokens: usize, config: Config) -> Result<Self, TokenError> {
         let encoder = cl100k_base().map_err(|e| TokenError::EncoderInit(e.to_string()))?;
 
         Ok(Self {
             encoder,
             max_tokens,
+            config,
         })
     }
 
-    pub fn optimize_context(&self, context: &mut CommitContext) -> Result<(), TokenError> {
+    /// Create a token optimizer for counting only (no config needed)
+    pub fn for_counting() -> Result<Self, TokenError> {
+        let encoder = cl100k_base().map_err(|e| TokenError::EncoderInit(e.to_string()))?;
+
+        Ok(Self {
+            encoder,
+            max_tokens: 0, // Not used for counting
+            config: Config::default(), // Not used for counting
+        })
+    }
+
+    pub async fn optimize_context(&self, context: &mut CommitContext) -> Result<(), TokenError> {
         let mut remaining_tokens = self.max_tokens;
 
         // Step 1: Process diffs (highest priority)
-        remaining_tokens = self.optimize_diffs(context, remaining_tokens)?;
+        remaining_tokens = self.optimize_diffs(context, remaining_tokens).await?;
         if remaining_tokens == 0 {
             debug!("Token budget exhausted after diffs, clearing commits and contents");
             Self::clear_commits_and_contents(context);
@@ -64,7 +77,7 @@ impl TokenOptimizer {
     }
 
     // Optimize diffs and return remaining tokens
-    fn optimize_diffs(
+    async fn optimize_diffs(
         &self,
         context: &mut CommitContext,
         mut remaining: usize,
@@ -74,10 +87,10 @@ impl TokenOptimizer {
 
             if diff_tokens > remaining {
                 debug!(
-                    "Truncating diff for {} from {} to {} tokens",
+                    "Summarizing diff for {} from {} to {} tokens",
                     file.path, diff_tokens, remaining
                 );
-                file.diff = self.truncate_string(&file.diff, remaining)?;
+                file.diff = self.hierarchical_summarize(&file.diff, remaining).await?;
                 return Ok(0);
             }
 
@@ -188,5 +201,66 @@ impl TokenOptimizer {
     #[inline]
     pub fn count_tokens(&self, s: &str) -> usize {
         self.encoder.encode_ordinary(s).len()
+    }
+
+    /// Summarize text using LLM
+    async fn summarize_text(&self, text: &str, max_tokens: usize) -> Result<String, TokenError> {
+        let system_prompt = "You are a code diff summarizer. Provide a concise summary of the changes in the given diff, focusing on what was added, modified, or removed.";
+        let user_prompt = format!("Summarize the following diff in {} tokens or less:\n\n{}", max_tokens, text);
+
+        match crate::core::llm::get_message::<String>(
+            &self.config,
+            &self.config.default_provider,
+            system_prompt,
+            &user_prompt,
+        ).await {
+            Ok(summary) => Ok(summary),
+            Err(e) => Err(TokenError::EncodingFailed(format!("Summarization failed: {}", e))),
+        }
+    }
+
+    /// Perform hierarchical summarization (map-reduce) on large text
+    async fn hierarchical_summarize(&self, text: &str, max_tokens: usize) -> Result<String, TokenError> {
+        // Try to summarize, but fall back to truncation if LLM fails
+        match self.try_hierarchical_summarize(text, max_tokens).await {
+            Ok(summary) => Ok(summary),
+            Err(_) => {
+                // Fallback to truncation
+                debug!("Summarization failed, falling back to truncation");
+                self.truncate_string(text, max_tokens)
+            }
+        }
+    }
+
+    async fn try_hierarchical_summarize(&self, text: &str, max_tokens: usize) -> Result<String, TokenError> {
+        // Split text into chunks that fit within LLM context
+        let chunk_size = 4000; // Conservative chunk size for LLM input
+        let chunks: Vec<&str> = text
+            .as_bytes()
+            .chunks(chunk_size)
+            .map(|chunk| std::str::from_utf8(chunk).unwrap_or(""))
+            .filter(|chunk| !chunk.is_empty())
+            .collect();
+
+        if chunks.len() <= 1 {
+            // If only one chunk, summarize directly
+            return self.summarize_text(text, max_tokens).await;
+        }
+
+        // Map: Summarize each chunk
+        let mut chunk_summaries = Vec::new();
+        for chunk in &chunks {
+            let summary = self.summarize_text(chunk, max_tokens / chunks.len()).await?;
+            chunk_summaries.push(summary);
+        }
+
+        // Reduce: Combine summaries
+        let combined = chunk_summaries.join("\n\n");
+        if self.count_tokens(&combined) <= max_tokens {
+            Ok(combined)
+        } else {
+            // If still too large, summarize the combined summaries
+            self.summarize_text(&combined, max_tokens).await
+        }
     }
 }

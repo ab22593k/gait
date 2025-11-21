@@ -30,6 +30,7 @@ pub async fn handle_input<A: TuiApp>(app: &mut A, key: KeyEvent) -> InputResult 
         }
         Mode::EditingInstructions => handle_editing_instructions(app, key),
         Mode::Help => handle_help(app, key),
+        Mode::Completing => handle_completing(app, key),
         Mode::Generating => {
             if key.code == KeyCode::Esc {
                 let state = app.get_state();
@@ -138,6 +139,14 @@ fn handle_editing_message<A: TuiApp>(app: &mut A, key: KeyEvent) -> InputResult 
         state.set_status(String::from("Commit message updated."));
         state.update_message_textarea();
         InputResult::Continue
+    } else if key.code == KeyCode::Tab {
+        // Trigger completion
+        let current_text = state.message_textarea.lines().join("\n");
+        let prefix = current_text.lines().next().unwrap_or("").to_string();
+        state.pending_completion_prefix = Some(prefix);
+        state.mode = Mode::Completing;
+        state.set_status(String::from("Generating completion suggestions..."));
+        InputResult::Continue
     } else {
         state.message_textarea.input(key);
         InputResult::Continue
@@ -163,6 +172,52 @@ fn handle_help<A: TuiApp>(app: &mut A, _key: KeyEvent) -> InputResult {
     state.mode = Mode::Normal; // Return to normal mode
     state.set_status(String::from("Help closed. Press '?' for help."));
     InputResult::Continue
+}
+
+fn handle_completing<A: TuiApp>(app: &mut A, key: KeyEvent) -> InputResult {
+    let state = app.get_state();
+    match key.code {
+        KeyCode::Tab => {
+            // Cycle through completion suggestions
+            if !state.completion_suggestions.is_empty() {
+                state.completion_index = (state.completion_index + 1) % state.completion_suggestions.len();
+                // Apply the current suggestion
+                let suggestion = &state.completion_suggestions[state.completion_index];
+                // For now, just update the status to show the suggestion
+                state.set_status(format!("Completion: {}", suggestion));
+            }
+            InputResult::Continue
+        }
+        KeyCode::Enter => {
+            // Accept the current completion
+            if !state.completion_suggestions.is_empty() {
+                let suggestion = state.completion_suggestions[state.completion_index].clone();
+                // Apply the suggestion to the message
+                if let Some(message) = state.messages.get_mut(state.current_index) {
+                    message.title = suggestion;
+                }
+                state.update_message_textarea();
+                state.completion_suggestions.clear();
+                state.mode = Mode::EditingMessage;
+                state.set_status(String::from("Completion accepted."));
+            }
+            InputResult::Continue
+        }
+        KeyCode::Esc => {
+            // Cancel completion
+            state.completion_suggestions.clear();
+            state.mode = Mode::EditingMessage;
+            state.set_status(String::from("Completion cancelled."));
+            InputResult::Continue
+        }
+        _ => {
+            // Any other key cancels completion and goes back to editing
+            state.completion_suggestions.clear();
+            state.mode = Mode::EditingMessage;
+            // Pass the key to the editing handler
+            handle_editing_message(app, key)
+        }
+    }
 }
 
 pub enum InputResult {

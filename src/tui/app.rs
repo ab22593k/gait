@@ -2,7 +2,7 @@ use super::input_handler::{InputResult, handle_input};
 use super::spinner::SpinnerState;
 use super::state::{Mode, TuiState};
 use super::ui::draw_ui;
-use crate::features::commit::{CommitService, format_commit_result, types::GeneratedMessage};
+use crate::features::commit::{CommitService, completion::CompletionService, format_commit_result, types::GeneratedMessage};
 use anyhow::{Error, Result};
 use ratatui::{
     Terminal,
@@ -22,6 +22,7 @@ use log::debug;
 pub struct TuiCommit {
     pub state: TuiState,
     service: Arc<CommitService>,
+    completion_service: Arc<CompletionService>,
 }
 
 impl TuiCommit {
@@ -29,10 +30,11 @@ impl TuiCommit {
         initial_messages: Vec<GeneratedMessage>,
         custom_instructions: String,
         service: Arc<CommitService>,
+        completion_service: Arc<CompletionService>,
     ) -> Self {
         let state = TuiState::new(initial_messages, custom_instructions);
 
-        Self { state, service }
+        Self { state, service, completion_service }
     }
 
     #[allow(clippy::unused_async)]
@@ -40,8 +42,9 @@ impl TuiCommit {
         initial_messages: Vec<GeneratedMessage>,
         custom_instructions: String,
         service: Arc<CommitService>,
+        completion_service: Arc<CompletionService>,
     ) -> Result<()> {
-        let mut app = Self::new(initial_messages, custom_instructions, service);
+        let mut app = Self::new(initial_messages, custom_instructions, service, completion_service);
 
         app.run_app().await.map_err(Error::from)
     }
@@ -89,7 +92,9 @@ impl TuiCommit {
         terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     ) -> anyhow::Result<ExitStatus> {
         let (tx, mut rx) = tokio::sync::mpsc::channel::<Result<GeneratedMessage, anyhow::Error>>(1);
+        let (completion_tx, mut completion_rx) = tokio::sync::mpsc::channel::<Result<Vec<String>, anyhow::Error>>(1);
         let mut task_spawned = false;
+        let mut completion_task_spawned = false;
 
         loop {
             // Redraw only if dirty
@@ -111,6 +116,30 @@ impl TuiCommit {
                 });
 
                 task_spawned = true; // Ensure we only spawn the task once
+            }
+
+            // Spawn completion task if there's a pending completion request
+            if let Some(prefix) = &self.state.pending_completion_prefix.clone() {
+                if !completion_task_spawned {
+                    let _completion_service = self.completion_service.clone();
+                    let prefix = prefix.clone();
+                    let completion_tx = completion_tx.clone();
+
+                    tokio::spawn(async move {
+                        debug!("Generating completion for prefix: {}", prefix);
+                        // For now, generate some mock suggestions based on the prefix
+                        // In the future, this should call completion_service.complete_message
+                        let suggestions = vec![
+                            format!("{}: add new feature", prefix),
+                            format!("{}: fix bug", prefix),
+                            format!("{}: update documentation", prefix),
+                        ];
+                        let _ = completion_tx.send(Ok(suggestions)).await;
+                    });
+
+                    completion_task_spawned = true;
+                    self.state.pending_completion_prefix = None; // Clear the pending request
+                }
             }
 
             // Check if a message has been received from the generation task
@@ -137,6 +166,29 @@ impl TuiCommit {
                 },
                 Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {
                     // No message available yet, continue the loop
+                }
+                Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
+                    // Handle the case where the sender has disconnected
+                    task_spawned = false;
+                }
+            }
+
+            // Check if completion suggestions have been received
+            match completion_rx.try_recv() {
+                Ok(result) => match result {
+                    Ok(suggestions) => {
+                        self.state.completion_suggestions = suggestions;
+                        self.state.completion_index = 0;
+                        completion_task_spawned = false;
+                    }
+                    Err(e) => {
+                        self.state.set_status(format!("Failed to get completions: {e}"));
+                        self.state.mode = Mode::EditingMessage;
+                        completion_task_spawned = false;
+                    }
+                },
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {
+                    // No completion available yet, continue the loop
                 }
                 Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
                     // Handle the case where the sender has disconnected
@@ -212,8 +264,9 @@ pub async fn run_tui_commit(
     initial_messages: Vec<GeneratedMessage>,
     custom_instructions: String,
     service: Arc<CommitService>,
+    completion_service: Arc<CompletionService>,
 ) -> Result<()> {
-    TuiCommit::run(initial_messages, custom_instructions, service).await
+    TuiCommit::run(initial_messages, custom_instructions, service, completion_service).await
 }
 
 pub enum ExitStatus {

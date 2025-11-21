@@ -10,6 +10,7 @@ pub enum Mode {
     EditingInstructions,
     Generating,
     Help,
+    Completing,
 }
 
 pub struct TuiState {
@@ -25,6 +26,9 @@ pub struct TuiState {
     pub last_spinner_update: std::time::Instant,
     pub instructions_visible: bool,
     pub nav_bar_visible: bool,
+    pub completion_suggestions: Vec<String>,
+    pub completion_index: usize,
+    pub pending_completion_prefix: Option<String>,
 }
 
 impl TuiState {
@@ -58,6 +62,9 @@ impl TuiState {
             last_spinner_update: std::time::Instant::now(),
             instructions_visible: false,
             nav_bar_visible: true,
+            completion_suggestions: Vec::new(),
+            completion_index: 0,
+            pending_completion_prefix: None,
         }
     }
 

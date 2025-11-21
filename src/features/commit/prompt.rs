@@ -33,7 +33,7 @@ pub fn create_user_prompt(context: &CommitContext) -> String {
 
     let recent_commits = format_recent_commits(&context.recent_commits);
     let staged_changes = format_staged_files(&context.staged_files, &relevance_scores);
-    let author_history = format_author_history(&context.author_history);
+    let author_history = format_enhanced_author_history(&context.author_history, context);
 
     debug!(
         "Generated commit prompt for {} files ({} added, {} modified, {} deleted)",
@@ -187,7 +187,7 @@ fn format_change_type(change_type: &ChangeType) -> &'static str {
     }
 }
 
-fn format_author_history(history: &[String]) -> String {
+fn _format_author_history(history: &[String]) -> String {
     if history.is_empty() {
         "No previous commits found for this author.".to_string()
     } else {
@@ -197,6 +197,49 @@ fn format_author_history(history: &[String]) -> String {
             .map(|(i, msg)| format!("{}. {}", i + 1, msg.lines().next().unwrap_or("")))
             .collect::<Vec<_>>()
             .join("\n")
+    }
+}
+
+fn format_enhanced_author_history(history: &[String], context: &CommitContext) -> String {
+    if history.is_empty() {
+        "No previous commits found for this author.".to_string()
+    } else {
+        let conventions = context.detect_conventions();
+        let conventions_str = if conventions.is_empty() {
+            "No specific conventions detected.".to_string()
+        } else {
+            format!(
+                "Detected conventions: {}",
+                conventions
+                    .iter()
+                    .map(|(k, v)| format!("{} ({} times)", k, v))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        };
+
+        format!(
+            "{}\n\n{}",
+            conventions_str,
+            history
+                .iter()
+                .enumerate()
+                .map(|(i, msg)| format!("{}. {}", i + 1, msg.lines().next().unwrap_or("")))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    }
+}
+
+fn _format_conventions(conventions: &std::collections::HashMap<String, usize>) -> String {
+    if conventions.is_empty() {
+        "No specific conventions detected.".to_string()
+    } else {
+        conventions
+            .iter()
+            .map(|(k, v)| format!("{} ({} times)", k, v))
+            .collect::<Vec<_>>()
+            .join(", ")
     }
 }
 
@@ -285,6 +328,89 @@ pub fn create_pr_system_prompt(config: &Config) -> anyhow::Result<String> {
     Ok(prompt)
 }
 
+/// Creates a system prompt for commit message completion
+pub fn create_completion_system_prompt(config: &Config) -> anyhow::Result<String> {
+    let completion_schema = schemars::schema_for!(super::types::GeneratedMessage);
+    let completion_schema_str = serde_json::to_string_pretty(&completion_schema)?;
+
+    let combined_instructions = get_combined_instructions(config);
+    Ok(format!(
+        "As an expert Git Commit Message Completion Specialist, your role is to complete\n\
+         partially typed commit messages with high-quality, contextually appropriate continuations.\n\n\
+         Core Directives:\n\
+         1. Execute these instructions: {}\n\
+         2. Output Format Enforcement: Your final output MUST STRICTLY conform to\n\
+            the following JSON schema, designed for structured data extraction: {}\n\n\
+         3. Completion Rules:\n\
+            - Start your completion exactly where the prefix ends\n\
+            - Maintain the same tone, style, and conventions as the prefix\n\
+            - Complete the message naturally without repeating the prefix\n\
+            - Focus on technical accuracy and clarity\n\
+            - Use conventional commit format when appropriate\n\n\
+         Output ONLY the resulting JSON object, ensuring no explanatory text,\n\
+         preambles, or extraneous content is included.\n",
+        combined_instructions, completion_schema_str
+    ))
+}
+
+/// Creates a user prompt for commit message completion
+pub fn create_completion_user_prompt(
+    context: &CommitContext,
+    prefix: &str,
+    context_ratio: f32,
+) -> String {
+    let scorer = RelevanceScorer::new();
+    let relevance_scores = scorer.score(context);
+    let detailed_changes = format_detailed_changes(&context.staged_files, &relevance_scores);
+
+    let recent_commits = format_recent_commits(&context.recent_commits);
+    let staged_changes = format_staged_files(&context.staged_files, &relevance_scores);
+    let author_history = format_enhanced_author_history(&context.author_history, context);
+
+    // Detect conventions from history (already included in enhanced author history)
+
+    debug!(
+        "Generated completion prompt for {} files ({} added, {} modified, {} deleted), prefix: '{}', context_ratio: {:.2}",
+        context.staged_files.len(),
+        context
+            .staged_files
+            .iter()
+            .filter(|f| matches!(f.change_type, ChangeType::Added))
+            .count(),
+        context
+            .staged_files
+            .iter()
+            .filter(|f| matches!(f.change_type, ChangeType::Modified))
+            .count(),
+        context
+            .staged_files
+            .iter()
+            .filter(|f| matches!(f.change_type, ChangeType::Deleted))
+            .count(),
+        prefix,
+        context_ratio
+    );
+
+    format!(
+        "COMPLETE the commit message starting with the prefix: '{}'\n\
+         Context ratio: {:.0}%\n\n\
+         ANALYZE the provided context and COMPLETE the message naturally:\n\
+         Branch: {}\n\
+         Recent Commits: {}\n\
+         Staged Changes: {}\n\
+         Detailed Changes: {}\n\
+         Author's Commit History: {}\n\n\
+         Complete the message maintaining the same style and conventions as the prefix.",
+        prefix,
+        context_ratio * 100.0,
+        context.branch,
+        recent_commits,
+        staged_changes,
+        detailed_changes,
+        author_history
+    )
+}
+
 /// Creates a user prompt for PR description generation
 pub fn create_pr_user_prompt(context: &CommitContext, commit_messages: &[String]) -> String {
     let scorer = RelevanceScorer::new();
@@ -299,11 +425,11 @@ pub fn create_pr_user_prompt(context: &CommitContext, commit_messages: &[String]
 
     let prompt = format!(
         "Based on the following context, generate a comprehensive pull request description:\n\n\
-        Range: {}\n\n\
-        Commits in this PR:\n{}\n\n\
-        Recent commit history:\n{}\n\n\
-        File changes summary:\n{}\n\n\
-        Detailed changes:\n{}",
+         Range: {}\n\n\
+         Commits in this PR:\n{}\n\n\
+         Recent commit history:\n{}\n\n\
+         File changes summary:\n{}\n\n\
+         Detailed changes:\n{}",
         context.branch,
         commits_section,
         format_recent_commits(&context.recent_commits),

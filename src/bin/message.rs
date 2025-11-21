@@ -42,6 +42,56 @@ struct MessageArgs {
         help = "Specific commit to amend (hash, branch, or reference). Defaults to HEAD when --amend is used"
     )]
     commit: Option<String>,
+
+    /// Complete a commit message instead of generating from scratch
+    #[arg(
+        long,
+        help = "Complete a commit message instead of generating from scratch"
+    )]
+    complete: bool,
+
+    /// Prefix text to complete (required when using --complete)
+    #[arg(
+        long,
+        help = "Prefix text to complete (required when using --complete)",
+        requires = "complete"
+    )]
+    prefix: Option<String>,
+
+    /// Context ratio for completion (0.0 to 1.0, default: 0.5)
+    #[arg(
+        long,
+        help = "Context ratio for completion (0.0 to 1.0, default: 0.5). Higher values use more of the original message as context.",
+        requires = "complete"
+    )]
+    context_ratio: Option<f32>,
+
+    /// Evaluate commit message generation/completion on a dataset
+    #[arg(
+        long,
+        help = "Evaluate commit message generation/completion on a dataset"
+    )]
+    evaluate: bool,
+
+    /// Path to evaluation dataset (JSON format, required when using --evaluate)
+    #[arg(
+        long,
+        help = "Path to evaluation dataset (JSON format, required when using --evaluate)",
+        requires = "evaluate"
+    )]
+    dataset: Option<String>,
+
+    /// Include history in evaluation
+    #[arg(long, help = "Include history in evaluation", requires = "evaluate")]
+    with_history: bool,
+
+    /// Filter dataset by restrictive filters
+    #[arg(
+        long,
+        help = "Filter dataset by restrictive filters",
+        requires = "evaluate"
+    )]
+    filter_restrictive: bool,
 }
 
 #[tokio::main]
@@ -62,6 +112,11 @@ async fn main() -> Result<()> {
             commit_ref: args.commit,
         },
         repository_url,
+        args.complete,
+        args.prefix,
+        args.context_ratio,
+        args.with_history,
+        args.filter_restrictive,
     )
     .await
     {

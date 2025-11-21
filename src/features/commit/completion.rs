@@ -1,4 +1,4 @@
-use super::prompt::{create_system_prompt, create_user_prompt};
+use super::prompt::{create_completion_system_prompt, create_completion_user_prompt};
 use super::types::GeneratedMessage;
 use crate::config::Config;
 use crate::core::context::CommitContext;
@@ -12,8 +12,8 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
 
-/// Service for handling Git commit operations with AI assistance
-pub struct CommitService {
+/// Service for handling Git commit message completion with AI assistance
+pub struct CompletionService {
     config: Config,
     repo: Arc<GitRepo>,
     provider_name: String,
@@ -21,8 +21,8 @@ pub struct CommitService {
     cached_context: Arc<RwLock<Option<CommitContext>>>,
 }
 
-impl CommitService {
-    /// Create a new `CommitService` instance
+impl CompletionService {
+    /// Create a new `CompletionService` instance
     ///
     /// # Arguments
     ///
@@ -34,7 +34,7 @@ impl CommitService {
     ///
     /// # Returns
     ///
-    /// A Result containing the new `CommitService` instance or an error
+    /// A Result containing the new `CompletionService` instance or an error
     pub fn new(
         config: Config,
         _repo_path: &Path,
@@ -79,51 +79,50 @@ impl CommitService {
         Ok(context)
     }
 
-    /// Get Git information including unstaged changes
-    pub async fn get_git_info_with_unstaged(
-        &self,
-        include_unstaged: bool,
-    ) -> Result<CommitContext> {
-        if !include_unstaged {
-            return self.get_git_info().await;
-        }
+    /// Generate a commit message completion using AI
+    ///
+    /// # Arguments
+    ///
+    /// * `prefix` - The prefix text to complete
+    /// * `context_ratio` - The ratio of the original message to use as context (0.0 to 1.0)
+    ///
+    /// # Returns
+    ///
+    /// A Result containing the generated completion or an error
+    pub async fn complete_message(&self, prefix: &str, context_ratio: f32) -> anyhow::Result<GeneratedMessage> {
+        let mut config_clone = self.config.clone();
 
-        {
-            // Only use cached context if we're not including unstaged changes
-            // because unstaged changes might have changed since we last checked
-            let cached_context = self.cached_context.read().await;
-            if let Some(context) = &*cached_context
-                && !include_unstaged
-            {
-                return Ok(context.clone());
-            }
-        }
+        // Set instructions to include completion context
+        let completion_instructions = format!(
+            "Complete the commit message starting with the prefix: '{}'. Use {}% of the original message as context.",
+            prefix,
+            (context_ratio * 100.0) as i32
+        );
+        config_clone.instructions = completion_instructions;
 
-        let context = self
-            .repo
-            .get_git_info_with_unstaged(&self.config, include_unstaged)
-            .await?;
+        let mut context = self.get_git_info().await?;
 
-        // Don't cache the context with unstaged changes since they can be constantly changing
-        if !include_unstaged {
-            let mut cached_context = self.cached_context.write().await;
-            *cached_context = Some(context.clone());
-        }
+        // Enhance context with semantically similar history
+        context.author_history = context.get_enhanced_history(10);
 
-        Ok(context)
-    }
+        // Create system prompt for completion
+        let system_prompt = create_completion_system_prompt(&config_clone)?;
 
-    /// Get Git information for a specific commit
-    pub async fn get_git_info_for_commit(&self, commit_id: &str) -> Result<CommitContext> {
-        debug!("Getting git info for commit: {}", commit_id);
+        // Use the shared optimization logic
+        let (_, final_user_prompt) =
+            self.optimize_prompt(&config_clone, &system_prompt, context, |ctx| {
+                create_completion_user_prompt(ctx, prefix, context_ratio)
+            }).await;
 
-        let context = self
-            .repo
-            .get_git_info_for_commit(&self.config, commit_id)
-            .await?;
+        let generated_message = llm::get_message::<GeneratedMessage>(
+            &config_clone,
+            &self.provider_name,
+            &system_prompt,
+            &final_user_prompt,
+        )
+        .await?;
 
-        // We don't cache commit-specific contexts
-        Ok(context)
+        Ok(generated_message)
     }
 
     /// Private helper method to handle common token optimization logic
@@ -215,143 +214,6 @@ impl CommitService {
         (context, final_user_prompt)
     }
 
-    /// Generate a commit message using AI
-    ///
-    /// # Arguments
-    ///
-    /// * `preset` - The instruction preset to use
-    /// * `instructions` - Custom instructions for the AI
-    ///
-    /// # Returns
-    ///
-    /// A Result containing the generated commit message or an error
-    pub async fn generate_message(&self, instructions: &str) -> anyhow::Result<GeneratedMessage> {
-        let mut config_clone = self.config.clone();
-
-        config_clone.instructions = instructions.to_string();
-
-        let context = self.get_git_info().await?;
-
-        // Create system prompt
-        let system_prompt = create_system_prompt(&config_clone)?;
-
-        // Use the shared optimization logic
-        let (_, final_user_prompt) =
-            self.optimize_prompt(&config_clone, &system_prompt, context, create_user_prompt).await;
-
-        let generated_message = llm::get_message::<GeneratedMessage>(
-            &config_clone,
-            &self.provider_name,
-            &system_prompt,
-            &final_user_prompt,
-        )
-        .await?;
-
-        Ok(generated_message)
-    }
-
-    /// Generate a PR description for a commit range
-    ///
-    /// # Arguments
-    ///
-    /// * `preset` - The instruction preset to use
-    /// * `instructions` - Custom instructions for the AI
-    /// * `from` - The starting Git reference (exclusive)
-    /// * `to` - The ending Git reference (inclusive)
-    ///
-    /// # Returns
-    ///
-    /// A Result containing the generated PR description or an error
-    pub async fn generate_pr_for_commit_range(
-        &self,
-        instructions: &str,
-        from: &str,
-        to: &str,
-    ) -> anyhow::Result<super::types::GeneratedPullRequest> {
-        let mut config_clone = self.config.clone();
-
-        config_clone.instructions = instructions.to_string();
-
-        // Get context for the commit range
-        let context = self
-            .repo
-            .get_git_info_for_commit_range(&self.config, from, to)
-            .await?;
-
-        // Get commit messages for the PR
-        let commit_messages = self.repo.get_commits_for_pr(from, to)?;
-
-        // Create system prompt
-        let system_prompt = super::prompt::create_pr_system_prompt(&config_clone)?;
-
-        // Use the shared optimization logic
-        let (_, final_user_prompt) =
-            self.optimize_prompt(&config_clone, &system_prompt, context, |ctx| {
-                super::prompt::create_pr_user_prompt(ctx, &commit_messages)
-            }).await;
-
-        let generated_pr = llm::get_message::<super::types::GeneratedPullRequest>(
-            &config_clone,
-            &self.provider_name,
-            &system_prompt,
-            &final_user_prompt,
-        )
-        .await?;
-
-        Ok(generated_pr)
-    }
-
-    /// Generate a PR description for branch comparison
-    ///
-    /// # Arguments
-    ///
-    /// * `preset` - The instruction preset to use
-    /// * `instructions` - Custom instructions for the AI
-    /// * `base_branch` - The base branch (e.g., "main")
-    /// * `target_branch` - The target branch (e.g., "feature-branch")
-    ///
-    /// # Returns
-    ///
-    /// A Result containing the generated PR description or an error
-    pub async fn generate_pr_for_branch_diff(
-        &self,
-        instructions: &str,
-        base_branch: &str,
-        target_branch: &str,
-    ) -> anyhow::Result<super::types::GeneratedPullRequest> {
-        let mut config_clone = self.config.clone();
-
-        config_clone.instructions = instructions.to_string();
-
-        // Get context for the branch comparison
-        let context = self
-            .repo
-            .get_git_info_for_branch_diff(&self.config, base_branch, target_branch)
-            .await?;
-
-        // Get commit messages for the PR (commits in target_branch not in base_branch)
-        let commit_messages = self.repo.get_commits_for_pr(base_branch, target_branch)?;
-
-        // Create system prompt
-        let system_prompt = super::prompt::create_pr_system_prompt(&config_clone)?;
-
-        // Use the shared optimization logic
-        let (_, final_user_prompt) =
-            self.optimize_prompt(&config_clone, &system_prompt, context, |ctx| {
-                super::prompt::create_pr_user_prompt(ctx, &commit_messages)
-            }).await;
-
-        let generated_pr = llm::get_message::<super::types::GeneratedPullRequest>(
-            &config_clone,
-            &self.provider_name,
-            &system_prompt,
-            &final_user_prompt,
-        )
-        .await?;
-
-        Ok(generated_pr)
-    }
-
     /// Performs a commit with the given message.
     ///
     /// # Arguments
@@ -383,9 +245,7 @@ impl CommitService {
                 return self
                     .repo
                     .amend_commit(message, commit_ref.unwrap_or("HEAD"));
-            } else {
-                return self.repo.commit(message);
-            }
+            return self.repo.commit(message);
         }
 
         // Execute pre-commit hook
@@ -437,8 +297,8 @@ impl CommitService {
         }
     }
 
-    /// Create a channel for message generation
-    pub fn create_message_channel(
+    /// Create a channel for message completion
+    pub fn create_completion_channel(
         &self,
     ) -> (
         mpsc::Sender<Result<GeneratedMessage>>,

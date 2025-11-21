@@ -1,3 +1,4 @@
+use super::completion::CompletionService;
 use super::format_commit_result;
 use super::service::CommitService;
 use super::types::{format_commit_message, format_pull_request};
@@ -10,6 +11,7 @@ use crate::tui::run_tui_commit;
 use crate::ui::{self, SpinnerState};
 
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::{
     io::{self, Write},
     sync::Arc,
@@ -72,20 +74,18 @@ pub async fn handle_message_command(
     common.apply_to_config(&mut config)?;
 
     // Create the service using the common function
-    let service = create_commit_service(
-        &common,
-        repository_url,
-        &config,
-        verify,
-    ).map_err(|e| {
-        ui::print_error(&format!("Error: {e}"));
-        ui::print_info("\nPlease ensure the following:");
-        ui::print_info("1. Git is installed and accessible from the command line.");
-        ui::print_info(
-            "2. You are running this command from within a Git repository or provide a repository URL with --repo.",
-        );
-        e
-    })?;
+    let service =
+        create_commit_service(&common, repository_url.clone(), &config, verify).map_err(|e| {
+            ui::print_error(&format!("Error: {e}"));
+            e
+        })?;
+
+    // Create the completion service
+    let completion_service = create_completion_service(&common, repository_url, &config, verify)
+        .map_err(|e| {
+            ui::print_error(&format!("Error: {e}"));
+            e
+        })?;
 
     // Validate amend parameters
     if !amend && commit_ref.is_some() {
@@ -189,7 +189,13 @@ pub async fn handle_message_command(
         return Ok(());
     }
 
-    run_tui_commit(vec![initial_message], effective_instructions, service).await?;
+    run_tui_commit(
+        vec![initial_message],
+        effective_instructions,
+        service,
+        completion_service,
+    )
+    .await?;
 
     Ok(())
 }
@@ -213,6 +219,132 @@ pub async fn handle_pr_command(
 
     // Print the PR description to stdout
     println!("{}", format_pull_request(&pr_description));
+
+    Ok(())
+}
+
+/// Handles the commit message completion command
+pub async fn handle_completion_command(
+    common: CommonParams,
+    prefix: String,
+    context_ratio: Option<f32>,
+    print: bool,
+    verify: bool,
+    dry_run: bool,
+    amend: bool,
+    commit_ref: Option<String>,
+    repository_url: Option<String>,
+) -> Result<()> {
+    let mut config = Config::load()?;
+    common.apply_to_config(&mut config)?;
+
+    // Default context ratio to 0.5 (50%) if not specified
+    let context_ratio = context_ratio.unwrap_or(0.5);
+
+    // Validate context ratio
+    if !(0.0..=1.0).contains(&context_ratio) {
+        ui::print_error("Context ratio must be between 0.0 and 1.0");
+        return Err(anyhow::anyhow!("Invalid context ratio: {}", context_ratio));
+    }
+
+    // Provide helpful information about context ratios
+    ui::print_info(&format!(
+        "Completing message with prefix '{}' using {:.0}% context ratio",
+        prefix,
+        context_ratio * 100.0
+    ));
+
+    // Create the completion service
+    let service = create_completion_service(
+        &common,
+        repository_url,
+        &config,
+        verify,
+    ).map_err(|e| {
+        ui::print_error(&format!("Error: {e}"));
+        ui::print_info("\nPlease ensure the following:");
+        ui::print_info("1. Git is installed and accessible from the command line.");
+        ui::print_info(
+            "2. You are running this command from within a Git repository or provide a repository URL with --repo.",
+        );
+        e
+    })?;
+
+    // Validate amend parameters
+    if !amend && commit_ref.is_some() {
+        ui::print_error("--commit can only be used with --amend");
+        return Err(anyhow::anyhow!("--commit requires --amend"));
+    }
+
+    if amend && commit_ref.is_some() && commit_ref.as_deref() != Some("HEAD") {
+        ui::print_error(
+            "Currently, only amending HEAD is supported. For amending other commits, use git directly.",
+        );
+        ui::print_info("Example: git commit --amend");
+        return Err(anyhow::anyhow!(
+            "Only HEAD amendments are currently supported"
+        ));
+    }
+
+    let git_info = service.get_git_info().await?;
+
+    if git_info.staged_files.is_empty() && !dry_run && !amend {
+        ui::print_warning(
+            "No staged changes. Please stage your changes before completing a commit message.",
+        );
+        ui::print_info("You can stage changes using 'git add <file>' or 'git add .'");
+        return Ok(());
+    }
+
+    // Run pre-commit hook before we do anything else
+    if let Err(e) = service.pre_commit() {
+        ui::print_error(&format!("Pre-commit failed: {e}"));
+        return Err(e);
+    }
+
+    let _effective_instructions = common
+        .instructions
+        .unwrap_or_else(|| config.instructions.clone());
+
+    // Create spinner for completion generation
+    let random_message = messages::get_waiting_message();
+    let spinner = ui::create_tui_spinner(&format!(
+        "{} - Completing commit message",
+        random_message.text
+    ));
+
+    // Generate completion with spinner display
+    let completed_message = if dry_run {
+        types::GeneratedMessage {
+            title: format!("{}: Complete the implementation", prefix),
+            message: "Add comprehensive error handling and improve code documentation.".to_string(),
+        }
+    } else {
+        run_with_spinner(spinner, || service.complete_message(&prefix, context_ratio)).await?
+    };
+
+    if print {
+        println!("{}", format_commit_message(&completed_message));
+        return Ok(());
+    }
+
+    // For completion, we don't support auto-commit since the user needs to review the completion
+    if service.is_remote_repository() {
+        ui::print_warning(
+            "Completion not available for remote repositories. Using print mode instead.",
+        );
+        println!("{}", format_commit_message(&completed_message));
+        return Ok(());
+    }
+
+    // Show the completed message and let user decide
+    ui::print_info(&format!("Prefix: {}", prefix));
+    ui::print_info("Completed message:");
+    println!("{}", format_commit_message(&completed_message));
+
+    ui::print_info(
+        "\nUse --print to output only the completed message, or --auto-commit to commit directly.",
+    );
 
     Ok(())
 }
@@ -515,4 +647,42 @@ fn create_commit_service(
         .context("Environment check failed")?;
 
     Ok(service)
+}
+
+/// Common function to set up `CompletionService`
+fn create_completion_service(
+    common: &CommonParams,
+    repository_url: Option<String>,
+    config: &Config,
+    verify: bool,
+) -> Result<Arc<CompletionService>> {
+    // Combine repository URL from CLI and CommonParams
+    let repo_url = repository_url.or(common.repository_url.clone());
+
+    // Create the git repository
+    let git_repo = GitRepo::new_from_url(repo_url).context("Failed to create GitRepo")?;
+
+    let repo_path = git_repo.repo_path().clone();
+    let provider_name = &config.default_provider;
+
+    let service = Arc::new(
+        CompletionService::new(config.clone(), &repo_path, provider_name, verify, git_repo)
+            .context("Failed to create CompletionService")?,
+    );
+
+    // Check environment prerequisites
+    service
+        .check_environment()
+        .context("Environment check failed")?;
+
+    Ok(service)
+}
+
+/// Dataset entry structure for evaluation
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EvaluationExample {
+    pub diff: String,
+    pub message: String,
+    pub author_history: Vec<String>,
+    pub repository: String,
 }

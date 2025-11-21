@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::core::commit_cache::{CachedCommitMessage, CommitMessageCache};
 use crate::core::context::{CommitContext, RecentCommit, StagedFile};
 
 use crate::git::commit::{self, CommitResult};
@@ -6,6 +7,7 @@ use crate::git::files::{RepoFilesInfo, get_file_statuses, get_unstaged_file_stat
 use crate::git::utils::is_inside_work_tree;
 use anyhow::{Context as AnyhowContext, Result, anyhow};
 use git2::{Repository, Tree};
+use std::collections::HashSet;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -393,7 +395,46 @@ impl GitRepo {
         ))
     }
 
-    /// Retrieves Git information for the repository.
+    /// Enhance context with cached commit messages from other repositories
+    async fn enhance_context_with_cache(
+        &self,
+        context: &mut CommitContext,
+        _config: &Config,
+    ) -> Result<()> {
+        let cache = CommitMessageCache::new()?;
+
+        // Get cached messages for this author
+        let cached_messages =
+            cache.get_commit_messages(&context.user_email, &self.repo_path.to_string_lossy());
+
+        // Convert cached messages to strings for the context
+        let cached_history: Vec<String> =
+            cached_messages.into_iter().map(|msg| msg.message).collect();
+
+        // Merge with existing history
+        let mut enhanced_history = context.author_history.clone();
+        enhanced_history.extend(cached_history);
+
+        // Remove duplicates and limit size
+        let mut unique_history = Vec::new();
+        let mut seen = HashSet::new();
+        for msg in enhanced_history {
+            if seen.insert(msg.clone()) {
+                unique_history.push(msg);
+            }
+        }
+
+        // Keep only the most recent 100 messages to avoid context overflow
+        if unique_history.len() > 100 {
+            unique_history = unique_history.into_iter().take(100).collect();
+        }
+
+        context.author_history = unique_history;
+
+        Ok(())
+    }
+
+    /// Get Git information including unstaged changes
     ///
     /// # Arguments
     ///
@@ -402,7 +443,7 @@ impl GitRepo {
     /// # Returns
     ///
     /// A Result containing the `CommitContext` or an error.
-    pub async fn get_git_info(&self, _config: &Config) -> Result<CommitContext> {
+    pub async fn get_git_info(&self, config: &Config) -> Result<CommitContext> {
         // Get data that doesn't cross async boundaries
         let repo = self.open_repo()?;
         debug!("Getting git info for repo path: {:?}", repo.path());
@@ -412,35 +453,57 @@ impl GitRepo {
         let staged_files = get_file_statuses(&repo, &self.gitignore_matcher)?;
 
         // Create and return the context
-        self.create_commit_context(branch, recent_commits, staged_files)
+        let mut context = self.create_commit_context(branch, recent_commits, staged_files)?;
+
+        // Enhance with cached commit messages
+        self.enhance_context_with_cache(&mut context, config)
+            .await?;
+
+        Ok(context)
     }
 
     /// Get Git information including unstaged changes
     ///
     /// # Arguments
     ///
-    /// * `config` - The configuration object
-    /// * `include_unstaged` - Whether to include unstaged changes
+    /// * `config` - The configuration object.
+    /// * `include_unstaged` - Whether to include unstaged changes.
     ///
     /// # Returns
     ///
     /// A Result containing the `CommitContext` or an error.
     pub async fn get_git_info_with_unstaged(
         &self,
-        _config: &Config,
+        config: &Config,
         include_unstaged: bool,
     ) -> Result<CommitContext> {
-        debug!("Getting git info with unstaged flag: {}", include_unstaged);
+        // Get data that doesn't cross async boundaries
+        let repo = self.open_repo()?;
+        debug!(
+            "Getting git info for repo path: {:?}, include_unstaged: {}",
+            repo.path(),
+            include_unstaged
+        );
 
-        // Extract all git2 data before crossing async boundaries
-        let files_info = self.extract_files_info(include_unstaged)?;
+        let branch = self.get_current_branch()?;
+        let recent_commits = self.get_recent_commits(5)?;
+        let mut staged_files = get_file_statuses(&repo, &self.gitignore_matcher)?;
+
+        // Add unstaged files if requested
+        if include_unstaged {
+            let unstaged_files = get_unstaged_file_statuses(&repo, &self.gitignore_matcher)?;
+            staged_files.extend(unstaged_files);
+            debug!("Combined {} files (staged + unstaged)", staged_files.len());
+        }
 
         // Create and return the context
-        self.create_commit_context(
-            files_info.branch,
-            files_info.recent_commits,
-            files_info.staged_files,
-        )
+        let mut context = self.create_commit_context(branch, recent_commits, staged_files)?;
+
+        // Enhance with cached commit messages
+        self.enhance_context_with_cache(&mut context, config)
+            .await?;
+
+        Ok(context)
     }
 
     /// Get Git information for comparing two branches
@@ -596,35 +659,46 @@ impl GitRepo {
             return Ok(Vec::new());
         }
 
-        let commits = revwalk
-            .filter_map(|oid| {
-                let oid = match oid {
-                    Ok(o) => o,
-                    Err(_) => return Some(Err(anyhow!("Failed to get commit OID"))),
-                };
-                let commit = match repo.find_commit(oid) {
-                    Ok(c) => c,
-                    Err(_) => return Some(Err(anyhow!("Failed to find commit"))),
-                };
-                let author = commit.author();
+        let mut cached_messages = Vec::new();
+        let mut commit_messages = Vec::new();
 
-                // Filter by author email
-                if author.email() == Some(author_email) {
-                    // Return only the commit message
-                    Some(Ok(commit.message().unwrap_or_default().to_string()))
-                } else {
-                    None // Skip commits by other authors
-                }
-            })
-            .take(count) // Take only the required number of commits
-            .collect::<Result<Vec<_>>>()?;
+        for oid_result in revwalk.take(count) {
+            let oid = oid_result?;
+            let commit = repo.find_commit(oid)?;
+            let author = commit.author();
+
+            // Filter by author email
+            if author.email() == Some(author_email) {
+                let message = commit.message().unwrap_or_default().to_string();
+                let timestamp = commit.time().seconds().to_string();
+                let hash = format!("{}", oid);
+
+                // Store for caching
+                cached_messages.push(CachedCommitMessage {
+                    message: message.clone(),
+                    timestamp,
+                    hash,
+                });
+
+                // Store for return
+                commit_messages.push(message);
+            }
+        }
+
+        // Cache the retrieved messages
+        if !cached_messages.is_empty() {
+            let mut cache = CommitMessageCache::new()?;
+            let repo_path = self.repo_path.to_string_lossy().to_string();
+            cache.add_commit_messages(author_email, &repo_path, cached_messages);
+            cache.save()?;
+        }
 
         debug!(
             "Retrieved {} commits for author {}",
-            commits.len(),
+            commit_messages.len(),
             author_email
         );
-        Ok(commits)
+        Ok(commit_messages)
     }
 
     /// Commits changes and verifies the commit.

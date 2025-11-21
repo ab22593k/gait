@@ -109,6 +109,7 @@ fn draw_nav_bar(f: &mut Frame, state: &TuiState, area: Rect) {
 fn draw_commit_message(f: &mut Frame, state: &mut TuiState, area: Rect) {
     match state.mode {
         Mode::Help => draw_help(f, state, area),
+        Mode::Completing => draw_completion(f, state, area),
         _ => {
             let is_editing = state.mode == Mode::EditingMessage;
             let border_color = if is_editing {
@@ -384,6 +385,42 @@ fn draw_help(f: &mut Frame, _state: &mut TuiState, area: Rect) {
         .wrap(Wrap { trim: true });
 
     f.render_widget(help_paragraph, area);
+}
+
+fn draw_completion(f: &mut Frame, state: &mut TuiState, area: Rect) {
+    let title = format!(
+        "🔍 Completion Suggestions ({}/{})",
+        state.completion_index + 1,
+        state.completion_suggestions.len()
+    );
+
+    let completion_block = Block::default()
+        .title(Span::styled(
+            title,
+            Style::default()
+                .fg(TITLE_COLOR)
+                .add_modifier(Modifier::BOLD),
+        ))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(BORDER_COLOR_ACTIVE));
+
+    let mut completion_lines = Vec::new();
+
+    for (i, suggestion) in state.completion_suggestions.iter().enumerate() {
+        let style = if i == state.completion_index {
+            Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::Gray)
+        };
+        completion_lines.push(Line::from(vec![Span::styled(suggestion.clone(), style)]));
+    }
+
+    let completion_paragraph = Paragraph::new(completion_lines)
+        .block(completion_block)
+        .style(Style::default())
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(completion_paragraph, area);
 }
 
 fn calculate_padding(terminal_width: usize, content_width: usize) -> (usize, usize) {

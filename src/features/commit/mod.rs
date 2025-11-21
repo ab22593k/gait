@@ -1,11 +1,12 @@
- mod cli;
- mod relevance;
- pub mod types;
+mod cli;
+pub mod completion;
+mod relevance;
+pub mod types;
 
 pub mod prompt;
 pub mod service;
 
-pub use cli::{handle_message_command, handle_pr_command};
+pub use cli::{handle_completion_command, handle_message_command, handle_pr_command};
 use git2::FileMode;
 pub use service::CommitService;
 pub use types::{
