@@ -88,25 +88,29 @@ pub async fn sync_with_caching(
     );
 
     // Fetch each unique repository to its cache location in parallel
-    let fetch_futures = unique_configs.iter().map(|config| {
-        let config = config.clone();
-        let fetcher = fetcher.clone();
-        async move {
-            let cache_key = CacheKeyGenerator::generate_key(&config);
-            let cache_dir = env::temp_dir().join("git-wire-cache").join(cache_key);
-            fs::create_dir_all(&cache_dir).map_err(|e| cause!(ErrorType::TempDirCreation).src(e))?;
-            let cache_path = cache_dir.to_string_lossy().to_string();
+    let fetch_futures = unique_configs
+        .iter()
+        .map(|config| {
+            let config = config.clone();
+            let fetcher = fetcher.clone();
+            async move {
+                let cache_key = CacheKeyGenerator::generate_key(&config);
+                let cache_dir = env::temp_dir().join("git-wire-cache").join(cache_key);
+                fs::create_dir_all(&cache_dir)
+                    .map_err(|e| cause!(ErrorType::TempDirCreation).src(e))?;
+                let cache_path = cache_dir.to_string_lossy().to_string();
 
-            debug!(
-                "Fetching repository {} to cache path {}",
-                config.url, cache_path
-            );
+                debug!(
+                    "Fetching repository {} to cache path {}",
+                    config.url, cache_path
+                );
 
-            fetcher.fetch_repository(&config, &cache_path).await?;
-            debug!("Repository {} successfully cached", config.url);
-            Ok((config, cache_path))
-        }
-    }).collect::<Vec<_>>();
+                fetcher.fetch_repository(&config, &cache_path).await?;
+                debug!("Repository {} successfully cached", config.url);
+                Ok((config, cache_path))
+            }
+        })
+        .collect::<Vec<_>>();
 
     let fetch_results = join_all(fetch_futures).await;
 

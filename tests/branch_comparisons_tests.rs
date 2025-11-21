@@ -36,7 +36,6 @@ async fn test_branch_comparison_basic() {
     // Test branch comparison
     let context = git_repo
         .get_git_info_for_branch_diff(&config, "main", "feature-branch")
-        .await
         .expect("Failed to get git info for branch diff");
 
     // Test branch name formatting
@@ -102,7 +101,6 @@ async fn test_branch_comparison_multiple_files() {
     // Test branch comparison
     let context = git_repo
         .get_git_info_for_branch_diff(&config, "main", "feature-multiple")
-        .await
         .expect("Failed to get git info for branch diff");
 
     // Should have 4 files: 3 new + 1 modified
@@ -183,7 +181,6 @@ async fn test_branch_comparison_with_deletions() {
     // Test branch comparison
     let context = git_repo
         .get_git_info_for_branch_diff(&config, "main", "feature-delete")
-        .await
         .expect("Failed to get git info for branch diff");
 
     // Should have 1 deleted file
@@ -225,7 +222,6 @@ async fn test_branch_comparison_default_from_main() {
     // Test branch comparison using main as default base
     let context = git_repo
         .get_git_info_for_branch_diff(&config, "main", "feature-default")
-        .await
         .expect("Failed to get git info for branch diff");
 
     // Verify we get the expected results
@@ -272,7 +268,6 @@ async fn test_branch_comparison_with_binary_files() {
     // Test branch comparison
     let context = git_repo
         .get_git_info_for_branch_diff(&config, "main", "feature-binary")
-        .await
         .expect("Failed to get git info for branch diff");
 
     // Should have 1 binary file
@@ -294,24 +289,19 @@ async fn test_branch_comparison_nonexistent_branches() {
     let config = MockDataBuilder::config();
 
     // Test with nonexistent base branch
-    let result = git_repo
-        .get_git_info_for_branch_diff(&config, "nonexistent-base", "main")
-        .await;
+    let result = git_repo.get_git_info_for_branch_diff(&config, "nonexistent-base", "main");
     assert!(result.is_err(), "Should fail with nonexistent base branch");
 
     // Test with nonexistent target branch
-    let result = git_repo
-        .get_git_info_for_branch_diff(&config, "main", "nonexistent-target")
-        .await;
+    let result = git_repo.get_git_info_for_branch_diff(&config, "main", "nonexistent-target");
     assert!(
         result.is_err(),
         "Should fail with nonexistent target branch"
     );
 
     // Test with both branches nonexistent
-    let result = git_repo
-        .get_git_info_for_branch_diff(&config, "nonexistent-base", "nonexistent-target")
-        .await;
+    let result =
+        git_repo.get_git_info_for_branch_diff(&config, "nonexistent-base", "nonexistent-target");
     assert!(
         result.is_err(),
         "Should fail with both branches nonexistent"
@@ -355,7 +345,6 @@ async fn test_branch_comparison_with_merge_base() {
     // Test branch comparison (feature branch against main)
     let context = git_repo
         .get_git_info_for_branch_diff(&config, "main", "feature-mergeback")
-        .await
         .expect("Failed to get git info for branch diff");
 
     // Should show the feature file added

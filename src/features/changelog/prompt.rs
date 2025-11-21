@@ -4,15 +4,15 @@ use super::{
 };
 use crate::common::{DetailLevel, get_combined_instructions};
 use crate::config::Config;
-use std::fmt::Write;
 use log::debug;
+use std::fmt::Write;
 
 pub fn create_changelog_system_prompt(config: &Config) -> String {
     let changelog_schema = schemars::schema_for!(ChangelogResponse);
     let changelog_schema_str = match serde_json::to_string_pretty(&changelog_schema) {
         Ok(schema) => schema,
         Err(e) => {
-            debug!("Failed to serialize changelog schema: {}", e);
+            debug!("Failed to serialize changelog schema: {e}");
             "{ \"error\": \"Failed to serialize schema\" }".to_string()
         }
     };
@@ -120,7 +120,7 @@ pub fn create_release_notes_system_prompt(config: &Config) -> String {
     let release_notes_schema_str = match serde_json::to_string_pretty(&release_notes_schema) {
         Ok(schema) => schema,
         Err(e) => {
-            debug!("Failed to serialize release notes schema: {}", e);
+            debug!("Failed to serialize release notes schema: {e}");
             "{ \"error\": \"Failed to serialize schema\" }".to_string()
         }
     };

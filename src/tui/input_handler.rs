@@ -180,11 +180,12 @@ fn handle_completing<A: TuiApp>(app: &mut A, key: KeyEvent) -> InputResult {
         KeyCode::Tab => {
             // Cycle through completion suggestions
             if !state.completion_suggestions.is_empty() {
-                state.completion_index = (state.completion_index + 1) % state.completion_suggestions.len();
+                state.completion_index =
+                    (state.completion_index + 1) % state.completion_suggestions.len();
                 // Apply the current suggestion
                 let suggestion = &state.completion_suggestions[state.completion_index];
                 // For now, just update the status to show the suggestion
-                state.set_status(format!("Completion: {}", suggestion));
+                state.set_status(format!("Completion: {suggestion}"));
             }
             InputResult::Continue
         }

@@ -250,6 +250,7 @@ pub struct CmsgConfig {
     pub commit_ref: Option<String>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn handle_message(
     common: CommonParams,
     config: CmsgConfig,
@@ -320,8 +321,7 @@ pub async fn handle_changelog(
     version_name: Option<String>,
 ) -> anyhow::Result<()> {
     debug!(
-        "Handling 'changelog' command with common: {:?}, from: {}, to: {:?}, update: {}, file: {:?}, version_name: {:?}",
-        common, from, to, update, file, version_name
+        "Handling 'changelog' command with common: {common:?}, from: {from}, to: {to:?}, update: {update}, file: {file:?}, version_name: {version_name:?}"
     );
     handle_changelog_command(common, from, to, repository_url, update, file, version_name).await
 }
@@ -335,8 +335,7 @@ pub async fn handle_release_notes(
     version_name: Option<String>,
 ) -> anyhow::Result<()> {
     debug!(
-        "Handling 'release-notes' command with common: {:?}, from: {}, to: {:?}, version_name: {:?}",
-        common, from, to, version_name
+        "Handling 'release-notes' command with common: {common:?}, from: {from}, to: {to:?}, version_name: {version_name:?}"
     );
     handle_release_notes_command(common, from, to, repository_url, version_name).await
 }
@@ -403,8 +402,7 @@ pub async fn handle_pr_command(
     repository_url: Option<String>,
 ) -> anyhow::Result<()> {
     debug!(
-        "Handling 'pr' command with common: {:?}, print: {}, from: {:?}, to: {:?}",
-        common, print, from, to
+        "Handling 'pr' command with common: {common:?}, print: {print}, from: {from:?}, to: {to:?}"
     );
     commit::handle_pr_command(common, print, repository_url, from, to).await
 }

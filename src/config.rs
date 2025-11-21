@@ -5,9 +5,9 @@ use crate::git::GitRepo;
 
 use anyhow::{Context, Result, anyhow};
 use git2::Config as GitConfig;
+use log::debug;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use log::debug;
 
 /// Get a configuration value with layered priority: env var > local git config > global git config
 fn get_layered_value(
@@ -85,14 +85,16 @@ impl Config {
             Some("GITAI_DEFAULT_PROVIDER"),
             local_config.as_ref(),
             global_config.as_ref(),
-        ).unwrap_or_else(|| "openai".to_string()); // fallback to openai if not set
+        )
+        .unwrap_or_else(|| "openai".to_string()); // fallback to openai if not set
 
         let instructions = get_layered_value(
             "gitai.instructions",
             Some("GITAI_INSTRUCTIONS"),
             local_config.as_ref(),
             global_config.as_ref(),
-        ).unwrap_or_default();
+        )
+        .unwrap_or_default();
 
         let mut providers = HashMap::new();
         for provider in get_available_provider_names() {
@@ -115,14 +117,16 @@ impl Config {
                     None, // no env for model yet
                     local_config.as_ref(),
                     global_config.as_ref(),
-                ).unwrap_or(default_model);
+                )
+                .unwrap_or(default_model);
 
                 let token_limit = get_layered_value(
                     &format!("gitai.{provider}-tokenlimit"),
                     None,
                     local_config.as_ref(),
                     global_config.as_ref(),
-                ).and_then(|s| s.parse::<i64>().ok())
+                )
+                .and_then(|s| s.parse::<i64>().ok())
                 .and_then(|v| usize::try_from(v).ok());
 
                 let additional_params = HashMap::new(); // TODO: handle additional params if needed
@@ -150,8 +154,6 @@ impl Config {
         debug!("Configuration loaded: {config:?}");
         Ok(config)
     }
-
-
 
     /// Merge this config with project-specific config, with project config taking precedence
     /// But never allow API keys from project config

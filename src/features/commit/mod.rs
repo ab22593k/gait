@@ -1,9 +1,13 @@
+#[allow(clippy::uninlined_format_args)]
 mod cli;
+#[allow(clippy::uninlined_format_args)]
 pub mod completion;
 mod relevance;
 pub mod types;
 
+#[allow(clippy::uninlined_format_args)]
 pub mod prompt;
+#[allow(clippy::uninlined_format_args)]
 pub mod service;
 
 pub use cli::{handle_completion_command, handle_message_command, handle_pr_command};

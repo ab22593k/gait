@@ -20,20 +20,68 @@ struct ProviderDefault {
     token_limit: usize,
 }
 
-lazy_static::lazy_static! {
-    static ref PROVIDER_DEFAULTS: std::collections::HashMap<&'static str, ProviderDefault> = {
-        let mut m = std::collections::HashMap::new();
-        m.insert("openai", ProviderDefault { model: "gpt-4.1", token_limit: 128_000 });
-        m.insert("anthropic", ProviderDefault { model: "claude-sonnet-4-20250514", token_limit: 200_000 });
-        m.insert("google", ProviderDefault { model: "gemini-2.5-flash-lite", token_limit: 1_000_000 });
-        m.insert("xai", ProviderDefault { model: "grok-2-beta", token_limit: 128_000 }); // assuming, since not in test
-        m.insert("deepseek", ProviderDefault { model: "deepseek-chat", token_limit: 64_000 }); // assuming
-        m.insert("phind", ProviderDefault { model: "Phind-70B", token_limit: 32_000 }); // assuming
-        m.insert("groq", ProviderDefault { model: "llama3-70b-8192", token_limit: 8_192 }); // assuming
-        m.insert("openrouter", ProviderDefault { model: "gpt-4.1", token_limit: 128_000 }); // assuming
-        m
-    };
-}
+static PROVIDER_DEFAULTS: std::sync::LazyLock<
+    std::collections::HashMap<&'static str, ProviderDefault>,
+> = std::sync::LazyLock::new(|| {
+    let mut m = std::collections::HashMap::new();
+    m.insert(
+        "openai",
+        ProviderDefault {
+            model: "gpt-4.1",
+            token_limit: 128_000,
+        },
+    );
+    m.insert(
+        "anthropic",
+        ProviderDefault {
+            model: "claude-sonnet-4-20250514",
+            token_limit: 200_000,
+        },
+    );
+    m.insert(
+        "google",
+        ProviderDefault {
+            model: "gemini-2.5-flash-lite",
+            token_limit: 1_000_000,
+        },
+    );
+    m.insert(
+        "xai",
+        ProviderDefault {
+            model: "grok-2-beta",
+            token_limit: 128_000,
+        },
+    ); // assuming, since not in test
+    m.insert(
+        "deepseek",
+        ProviderDefault {
+            model: "deepseek-chat",
+            token_limit: 64_000,
+        },
+    ); // assuming
+    m.insert(
+        "phind",
+        ProviderDefault {
+            model: "Phind-70B",
+            token_limit: 32_000,
+        },
+    ); // assuming
+    m.insert(
+        "groq",
+        ProviderDefault {
+            model: "llama3-70b-8192",
+            token_limit: 8_192,
+        },
+    ); // assuming
+    m.insert(
+        "openrouter",
+        ProviderDefault {
+            model: "gpt-4.1",
+            token_limit: 128_000,
+        },
+    ); // assuming
+    m
+});
 
 /// Generates a message using the given configuration
 pub async fn get_message<T>(
@@ -45,9 +93,9 @@ pub async fn get_message<T>(
 where
     T: DeserializeOwned + JsonSchema,
 {
-    debug!("Generating message using provider: {}", provider_name);
-    debug!("System prompt: {}", system_prompt);
-    debug!("User prompt: {}", user_prompt);
+    debug!("Generating message using provider: {provider_name}");
+    debug!("System prompt: {system_prompt}");
+    debug!("User prompt: {user_prompt}");
 
     // Parse the provider type
     let backend = if provider_name.to_lowercase() == "openrouter" {
@@ -187,13 +235,13 @@ where
                 match result {
                     Ok(message) => Ok(message),
                     Err(e) => {
-                        debug!("JSON parse error: {} text: {}", e, response_text);
+                        debug!("JSON parse error: {e} text: {response_text}");
                         Err(anyhow!("JSON parse error: {e}"))
                     }
                 }
             }
             Ok(Err(e)) => {
-                debug!("Provider error: {}", e);
+                debug!("Provider error: {e}");
                 Err(anyhow!("Provider error: {e}"))
             }
             Err(_) => {
@@ -210,7 +258,7 @@ where
             Ok(message)
         }
         Err(e) => {
-            debug!("Failed to generate message after retries: {}", e);
+            debug!("Failed to generate message after retries: {e}");
             Err(anyhow!("Failed to generate message: {e}"))
         }
     }
@@ -222,10 +270,7 @@ fn parse_json_response<T: DeserializeOwned>(text: &str) -> Result<T> {
         Ok(message) => Ok(message),
         Err(e) => {
             // Fallback to a more robust extraction if direct parsing fails
-            debug!(
-                "Direct JSON parse failed: {}. Attempting fallback extraction.",
-                e
-            );
+            debug!("Direct JSON parse failed: {e}. Attempting fallback extraction.");
             extract_and_parse_json(text)
         }
     }
@@ -238,10 +283,7 @@ fn parse_json_response_with_brace_prefix<T: DeserializeOwned>(text: &str) -> Res
     match serde_json::from_str::<T>(&json_text) {
         Ok(message) => Ok(message),
         Err(e) => {
-            debug!(
-                "Brace-prefixed JSON parse failed: {}. Attempting fallback extraction.",
-                e
-            );
+            debug!("Brace-prefixed JSON parse failed: {e}. Attempting fallback extraction.");
             extract_and_parse_json(text)
         }
     }

@@ -1,7 +1,10 @@
 // Git module providing functionality for Git repository operations
 
+#[allow(clippy::uninlined_format_args)]
 mod commit;
+#[allow(clippy::uninlined_format_args)]
 mod files;
+#[allow(clippy::uninlined_format_args)]
 mod ignore_matcher;
 mod repository;
 mod utils;

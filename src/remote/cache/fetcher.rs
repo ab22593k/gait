@@ -37,7 +37,7 @@ impl RepositoryFetcher {
             Ok(())
         })
         .await
-        .map_err(|e| cause!(ErrorType::GitCloneCommand).msg(format!("Task join error: {:?}", e)))??;
+        .map_err(|e| cause!(ErrorType::GitCloneCommand).msg(format!("Task join error: {e:?}")))??;
 
         println!("Repository fetched and cached at: {cache_path}");
         Ok(())

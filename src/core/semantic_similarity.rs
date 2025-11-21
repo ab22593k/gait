@@ -10,8 +10,15 @@ impl SemanticSimilarity {
     pub fn new() -> Self {
         Self {}
     }
+}
 
-    /// Calculate similarity between current changes and historical commit messages
+impl Default for SemanticSimilarity {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SemanticSimilarity {
     pub fn calculate_similarities(
         &self,
         change_keywords: &[String],
@@ -30,6 +37,9 @@ impl SemanticSimilarity {
     }
 
     /// Calculate similarity between change keywords and a single commit message
+    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::as_conversions)]
+    #[allow(clippy::unused_self)]
     fn calculate_message_similarity(&self, keywords: &[String], message: &str) -> f32 {
         if keywords.is_empty() {
             return 0.0;
@@ -40,7 +50,7 @@ impl SemanticSimilarity {
         let mut total_weight = 0.0;
 
         for keyword in keywords {
-            let weight = self.get_keyword_weight(keyword);
+            let weight = Self::get_keyword_weight(keyword);
             total_weight += weight;
 
             if message_lower.contains(keyword) {
@@ -56,7 +66,7 @@ impl SemanticSimilarity {
     }
 
     /// Get weight for a keyword based on its type (file names get higher weight)
-    fn get_keyword_weight(&self, keyword: &str) -> f32 {
+    fn get_keyword_weight(keyword: &str) -> f32 {
         // File-related keywords get higher weight
         if keyword.contains('.') || keyword.contains('/') {
             2.0
@@ -66,21 +76,24 @@ impl SemanticSimilarity {
     }
 
     /// Extract enhanced keywords from staged files and their changes
-    pub fn extract_keywords(&self, staged_files: &[crate::core::context::StagedFile]) -> Vec<String> {
+    pub fn extract_keywords(
+        &self,
+        staged_files: &[crate::core::context::StagedFile],
+    ) -> Vec<String> {
         let mut keywords = Vec::new();
         let mut keyword_counts = HashMap::new();
 
         for file in staged_files {
             // Extract from file path
-            self.extract_from_path(&file.path, &mut keywords, &mut keyword_counts);
+            Self::extract_from_path(&file.path, &mut keywords, &mut keyword_counts);
 
             // Extract from diff content
             if let Some(content) = &file.content {
-                self.extract_from_content(content, &mut keywords, &mut keyword_counts);
+                Self::extract_from_content(content, &mut keywords, &mut keyword_counts);
             }
 
             // Extract from diff
-            self.extract_from_diff(&file.diff, &mut keywords, &mut keyword_counts);
+            Self::extract_from_diff(&file.diff, &mut keywords, &mut keyword_counts);
         }
 
         // Sort by frequency and return top keywords
@@ -94,15 +107,19 @@ impl SemanticSimilarity {
             .collect()
     }
 
-    fn extract_from_path(&self, path: &str, keywords: &mut Vec<String>, counts: &mut HashMap<String, usize>) {
-        let file_name = path.split('/').last().unwrap_or(path);
+    fn extract_from_path(
+        path: &str,
+        keywords: &mut Vec<String>,
+        counts: &mut HashMap<String, usize>,
+    ) {
+        let file_name = path.split('/').next_back().unwrap_or(path);
         let parts: Vec<&str> = file_name.split('.').collect();
 
         if let Some(name_without_ext) = parts.first() {
             // Split camelCase and snake_case
             let words: Vec<String> = name_without_ext
                 .split('_')
-                .flat_map(|part| split_camel_case(part))
+                .flat_map(split_camel_case)
                 .map(|s| s.to_lowercase())
                 .filter(|s| s.len() > 2) // Filter out very short words
                 .collect();
@@ -118,12 +135,16 @@ impl SemanticSimilarity {
         }
     }
 
-    fn extract_from_content(&self, content: &str, keywords: &mut Vec<String>, counts: &mut HashMap<String, usize>) {
+    fn extract_from_content(
+        content: &str,
+        keywords: &mut Vec<String>,
+        counts: &mut HashMap<String, usize>,
+    ) {
         let content_words: Vec<String> = content
             .split_whitespace()
             .take(100) // Limit processing
             .filter(|word| word.len() > 3 && word.chars().all(|c| c.is_alphanumeric() || c == '_'))
-            .map(|word| word.to_lowercase())
+            .map(str::to_lowercase)
             .collect();
 
         for word in content_words {
@@ -134,14 +155,18 @@ impl SemanticSimilarity {
         }
     }
 
-    fn extract_from_diff(&self, diff: &str, keywords: &mut Vec<String>, counts: &mut HashMap<String, usize>) {
+    fn extract_from_diff(
+        diff: &str,
+        keywords: &mut Vec<String>,
+        counts: &mut HashMap<String, usize>,
+    ) {
         // Extract function names, variable names, etc. from diff
         let diff_words: Vec<String> = diff
             .lines()
             .filter(|line| line.starts_with('+') || line.starts_with('-'))
             .flat_map(|line| line.split_whitespace())
             .filter(|word| word.len() > 3 && word.chars().all(|c| c.is_alphanumeric() || c == '_'))
-            .map(|word| word.to_lowercase())
+            .map(str::to_lowercase)
             .take(50) // Limit processing
             .collect();
 
@@ -180,8 +205,8 @@ fn split_camel_case(s: &str) -> Vec<String> {
             if j > i + 1 && (j == chars.len() || (j < chars.len() && chars[j].is_lowercase())) {
                 // Acronym: take all uppercase letters except the last one
                 if j - i > 1 {
-                    words.push(chars[i..j-1].iter().collect());
-                    current_word.push(chars[j-1]);
+                    words.push(chars[i..j - 1].iter().collect());
+                    current_word.push(chars[j - 1]);
                 } else {
                     current_word.push(chars[i]);
                 }
@@ -211,7 +236,10 @@ mod tests {
     #[test]
     fn test_split_camel_case() {
         assert_eq!(split_camel_case("camelCase"), vec!["camel", "Case"]);
-        assert_eq!(split_camel_case("XMLHttpRequest"), vec!["XML", "Http", "Request"]);
+        assert_eq!(
+            split_camel_case("XMLHttpRequest"),
+            vec!["XML", "Http", "Request"]
+        );
         assert_eq!(split_camel_case("simple"), vec!["simple"]);
     }
 

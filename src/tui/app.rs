@@ -2,7 +2,9 @@ use super::input_handler::{InputResult, handle_input};
 use super::spinner::SpinnerState;
 use super::state::{Mode, TuiState};
 use super::ui::draw_ui;
-use crate::features::commit::{CommitService, completion::CompletionService, format_commit_result, types::GeneratedMessage};
+use crate::features::commit::{
+    CommitService, completion::CompletionService, format_commit_result, types::GeneratedMessage,
+};
 use anyhow::{Error, Result};
 use ratatui::{
     Terminal,
@@ -14,10 +16,10 @@ use ratatui::{
     },
 };
 
+use log::debug;
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
-use log::debug;
 
 pub struct TuiCommit {
     pub state: TuiState,
@@ -34,7 +36,11 @@ impl TuiCommit {
     ) -> Self {
         let state = TuiState::new(initial_messages, custom_instructions);
 
-        Self { state, service, completion_service }
+        Self {
+            state,
+            service,
+            completion_service,
+        }
     }
 
     #[allow(clippy::unused_async)]
@@ -44,7 +50,12 @@ impl TuiCommit {
         service: Arc<CommitService>,
         completion_service: Arc<CompletionService>,
     ) -> Result<()> {
-        let mut app = Self::new(initial_messages, custom_instructions, service, completion_service);
+        let mut app = Self::new(
+            initial_messages,
+            custom_instructions,
+            service,
+            completion_service,
+        );
 
         app.run_app().await.map_err(Error::from)
     }
@@ -87,12 +98,14 @@ impl TuiCommit {
         Ok(())
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn main_loop(
         &mut self,
         terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     ) -> anyhow::Result<ExitStatus> {
         let (tx, mut rx) = tokio::sync::mpsc::channel::<Result<GeneratedMessage, anyhow::Error>>(1);
-        let (completion_tx, mut completion_rx) = tokio::sync::mpsc::channel::<Result<Vec<String>, anyhow::Error>>(1);
+        let (completion_tx, mut completion_rx) =
+            tokio::sync::mpsc::channel::<Result<Vec<String>, anyhow::Error>>(1);
         let mut task_spawned = false;
         let mut completion_task_spawned = false;
 
@@ -126,7 +139,7 @@ impl TuiCommit {
                     let completion_tx = completion_tx.clone();
 
                     tokio::spawn(async move {
-                        debug!("Generating completion for prefix: {}", prefix);
+                        debug!("Generating completion for prefix: {prefix}");
                         // For now, generate some mock suggestions based on the prefix
                         // In the future, this should call completion_service.complete_message
                         let suggestions = vec![
@@ -182,7 +195,8 @@ impl TuiCommit {
                         completion_task_spawned = false;
                     }
                     Err(e) => {
-                        self.state.set_status(format!("Failed to get completions: {e}"));
+                        self.state
+                            .set_status(format!("Failed to get completions: {e}"));
                         self.state.mode = Mode::EditingMessage;
                         completion_task_spawned = false;
                     }
@@ -211,7 +225,9 @@ impl TuiCommit {
                 } else {
                     None
                 }
-            }).await.unwrap();
+            })
+            .await
+            .expect("Failed to poll for input events");
 
             if let Some(key) = event {
                 let input_result = handle_input(self, key).await;
@@ -266,7 +282,13 @@ pub async fn run_tui_commit(
     service: Arc<CommitService>,
     completion_service: Arc<CompletionService>,
 ) -> Result<()> {
-    TuiCommit::run(initial_messages, custom_instructions, service, completion_service).await
+    TuiCommit::run(
+        initial_messages,
+        custom_instructions,
+        service,
+        completion_service,
+    )
+    .await
 }
 
 pub enum ExitStatus {

@@ -3,7 +3,7 @@ use parking_lot::RwLock;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-/// GitIgnore matcher that handles .gitignore file parsing and pattern matching.
+/// `GitIgnore` matcher that handles .gitignore file parsing and pattern matching.
 ///
 /// This struct loads and caches all .gitignore files found in the repository,
 /// including nested .gitignore files in subdirectories. It uses the ignore crate
@@ -11,7 +11,7 @@ use std::sync::Arc;
 ///
 /// The matcher is lazily loaded on first use and cached for subsequent calls.
 /// If no .gitignore files are found, it falls back to hardcoded exclusion patterns
-/// for common files like node_modules, target/, .DS_Store, etc.
+/// for common files like `node_modules`, target/, `.DS_Store`, etc.
 #[derive(Debug, Clone)]
 pub struct GitIgnoreMatcher {
     /// Repository root path
@@ -21,7 +21,7 @@ pub struct GitIgnoreMatcher {
 }
 
 impl GitIgnoreMatcher {
-    /// Creates a new GitIgnoreMatcher for the given repository path
+    /// Creates a new `GitIgnoreMatcher` for the given repository path
     pub fn new(repo_path: &Path) -> Self {
         Self {
             repo_root: repo_path.to_path_buf(),
@@ -53,7 +53,7 @@ impl GitIgnoreMatcher {
         }
 
         // Check gitignore patterns
-        let gitignore_excluded = if let Some(ref gitignore) = *matcher_guard {
+        if let Some(ref gitignore) = *matcher_guard {
             // Convert file path to be relative to repo root
             let full_path = self.repo_root.join(file_path);
             let relative_path = full_path
@@ -84,9 +84,7 @@ impl GitIgnoreMatcher {
             result
         } else {
             false
-        };
-
-        gitignore_excluded
+        }
     }
 
     /// Recursively adds all .gitignore files to the builder
@@ -95,6 +93,7 @@ impl GitIgnoreMatcher {
     }
 
     /// Recursively adds .gitignore files from a directory and its subdirectories to the builder
+    #[allow(clippy::only_used_in_recursion)]
     fn add_gitignore_from_dir(
         &self,
         builder: &mut ignore::gitignore::GitignoreBuilder,
@@ -102,9 +101,13 @@ impl GitIgnoreMatcher {
     ) {
         let gitignore_path = dir.join(".gitignore");
         if gitignore_path.exists() {
-            debug!("Adding .gitignore from: {:?}", gitignore_path);
+            debug!("Adding .gitignore from: {}", gitignore_path.display());
             if let Some(e) = builder.add(&gitignore_path) {
-                debug!("Failed to add .gitignore {:?}: {}", gitignore_path, e);
+                debug!(
+                    "Failed to add .gitignore {}: {}",
+                    gitignore_path.display(),
+                    e
+                );
             }
         }
 

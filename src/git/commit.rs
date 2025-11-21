@@ -121,8 +121,7 @@ pub fn amend_commit(
             if let Some(path) = entry.path() {
                 let mode = entry
                     .index_to_workdir()
-                    .map(|d| d.new_file().mode())
-                    .unwrap_or(git2::FileMode::Blob);
+                    .map_or(git2::FileMode::Blob, |d| d.new_file().mode());
                 new_files.push((path.to_string(), mode));
             }
         }

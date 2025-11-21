@@ -242,8 +242,7 @@ async fn test_git_repo_pr_methods() -> Result<()> {
 
         // Test get_git_info_for_commit_range
         let context = git_repo
-            .get_git_info_for_commit_range(&Config::default(), &from_id, &to_id)
-            .await?;
+            .get_git_info_for_commit_range(&Config::default(), &from_id, &to_id)?;
         assert!(context.branch.contains(".."));
         assert!(!context.staged_files.is_empty());
     }

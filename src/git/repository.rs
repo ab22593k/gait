@@ -28,7 +28,7 @@ pub struct GitRepo {
     is_remote: bool,
     /// Original remote URL if this is a cloned repository
     remote_url: Option<String>,
-    /// GitIgnore matcher for file exclusion
+    /// `GitIgnore` matcher for file exclusion
     gitignore_matcher: GitIgnoreMatcher,
 }
 
@@ -80,7 +80,7 @@ impl GitRepo {
     ///
     /// A Result containing the `GitRepo` instance or an error.
     pub fn clone_remote_repository(url: &str) -> Result<Self> {
-        debug!("Cloning remote repository from URL: {}", url);
+        debug!("Cloning remote repository from URL: {url}");
 
         // Validate URL
         let _ = Url::parse(url).map_err(|e| anyhow!("Invalid repository URL: {e}"))?;
@@ -89,7 +89,10 @@ impl GitRepo {
         let temp_dir = TempDir::new()?;
         let temp_path_buf = temp_dir.path().to_path_buf();
 
-        debug!("Created temporary directory for clone: {:?}", temp_path_buf);
+        debug!(
+            "Created temporary directory for clone: {}",
+            temp_path_buf.display()
+        );
 
         // Clone the repository into the temporary directory
         let repo = match Repository::clone(url, &temp_path_buf) {
@@ -97,7 +100,10 @@ impl GitRepo {
             Err(e) => return Err(anyhow!("Failed to clone repository: {e}")),
         };
 
-        debug!("Successfully cloned repository to {:?}", repo.path());
+        debug!(
+            "Successfully cloned repository to {}",
+            repo.path().display()
+        );
 
         Ok(Self {
             repo_path: temp_path_buf.clone(),
@@ -164,17 +170,14 @@ impl GitRepo {
     /// A Result containing the branch name as a String or an error.
     pub fn get_current_branch(&self) -> Result<String> {
         let repo = self.open_repo()?;
-        match repo.head() {
-            Ok(head) => {
-                let branch_name = head.shorthand().unwrap_or("HEAD detached").to_string();
-                debug!("Current branch: {}", branch_name);
-                Ok(branch_name)
-            }
-            Err(_) => {
-                // For fresh repos with no commits, default to "main"
-                debug!("No HEAD found (fresh repository), defaulting to 'main'");
-                Ok("main".to_string())
-            }
+        if let Ok(head) = repo.head() {
+            let branch_name = head.shorthand().unwrap_or("HEAD detached").to_string();
+            debug!("Current branch: {branch_name}");
+            Ok(branch_name)
+        } else {
+            // For fresh repos with no commits, default to "main"
+            debug!("No HEAD found (fresh repository), defaulting to 'main'");
+            Ok("main".to_string())
         }
     }
 
@@ -197,14 +200,14 @@ impl GitRepo {
         let hook_path = repo.path().join("hooks").join(hook_name);
 
         if hook_path.exists() {
-            debug!("Executing hook: {}", hook_name);
-            debug!("Hook path: {:?}", hook_path);
+            debug!("Executing hook: {hook_name}");
+            debug!("Hook path: {}", hook_path.display());
 
             // Get the repository's working directory (top level)
             let repo_workdir = repo
                 .workdir()
                 .context("Repository has no working directory")?;
-            debug!("Repository working directory: {:?}", repo_workdir);
+            debug!("Repository working directory: {}", repo_workdir.display());
 
             // Create a command with the proper environment and working directory
             let mut command = Command::new(&hook_path);
@@ -215,7 +218,7 @@ impl GitRepo {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
 
-            debug!("Executing hook command: {:?}", command);
+            debug!("Executing hook command: {command:?}");
 
             let mut child = command.spawn()?;
 
@@ -241,9 +244,9 @@ impl GitRepo {
                 ));
             }
 
-            debug!("Hook '{}' executed successfully", hook_name);
+            debug!("Hook '{hook_name}' executed successfully");
         } else {
-            debug!("Hook '{}' not found at {:?}", hook_name, hook_path);
+            debug!("Hook '{}' not found at {}", hook_name, hook_path.display());
         }
 
         Ok(())
@@ -315,7 +318,7 @@ impl GitRepo {
                 if let Some(blob) = object.as_blob()
                     && let Ok(content) = std::str::from_utf8(blob.content())
                 {
-                    debug!("README file found: {}", name);
+                    debug!("README file found: {name}");
                     return Ok(Some(content.to_string()));
                 }
             }
@@ -396,7 +399,7 @@ impl GitRepo {
     }
 
     /// Enhance context with cached commit messages from other repositories
-    async fn enhance_context_with_cache(
+    fn enhance_context_with_cache(
         &self,
         context: &mut CommitContext,
         _config: &Config,
@@ -443,10 +446,11 @@ impl GitRepo {
     /// # Returns
     ///
     /// A Result containing the `CommitContext` or an error.
+    #[allow(clippy::unused_async)]
     pub async fn get_git_info(&self, config: &Config) -> Result<CommitContext> {
         // Get data that doesn't cross async boundaries
         let repo = self.open_repo()?;
-        debug!("Getting git info for repo path: {:?}", repo.path());
+        debug!("Getting git info for repo path: {}", repo.path().display());
 
         let branch = self.get_current_branch()?;
         let recent_commits = self.get_recent_commits(5)?;
@@ -456,8 +460,7 @@ impl GitRepo {
         let mut context = self.create_commit_context(branch, recent_commits, staged_files)?;
 
         // Enhance with cached commit messages
-        self.enhance_context_with_cache(&mut context, config)
-            .await?;
+        self.enhance_context_with_cache(&mut context, config)?;
 
         Ok(context)
     }
@@ -472,6 +475,7 @@ impl GitRepo {
     /// # Returns
     ///
     /// A Result containing the `CommitContext` or an error.
+    #[allow(clippy::unused_async)]
     pub async fn get_git_info_with_unstaged(
         &self,
         config: &Config,
@@ -480,8 +484,8 @@ impl GitRepo {
         // Get data that doesn't cross async boundaries
         let repo = self.open_repo()?;
         debug!(
-            "Getting git info for repo path: {:?}, include_unstaged: {}",
-            repo.path(),
+            "Getting git info for repo path: {}, include_unstaged: {}",
+            repo.path().display(),
             include_unstaged
         );
 
@@ -500,8 +504,7 @@ impl GitRepo {
         let mut context = self.create_commit_context(branch, recent_commits, staged_files)?;
 
         // Enhance with cached commit messages
-        self.enhance_context_with_cache(&mut context, config)
-            .await?;
+        self.enhance_context_with_cache(&mut context, config)?;
 
         Ok(context)
     }
@@ -517,16 +520,13 @@ impl GitRepo {
     /// # Returns
     ///
     /// A Result containing the `CommitContext` for the branch comparison or an error.
-    pub async fn get_git_info_for_branch_diff(
+    pub fn get_git_info_for_branch_diff(
         &self,
         _config: &Config,
         base_branch: &str,
         target_branch: &str,
     ) -> Result<CommitContext> {
-        debug!(
-            "Getting git info for branch diff: {} -> {}",
-            base_branch, target_branch
-        );
+        debug!("Getting git info for branch diff: {base_branch} -> {target_branch}");
         let repo = self.open_repo()?;
 
         // Extract branch diff info
@@ -560,13 +560,13 @@ impl GitRepo {
     /// # Returns
     ///
     /// A Result containing the `CommitContext` for the commit range or an error.
-    pub async fn get_git_info_for_commit_range(
+    pub fn get_git_info_for_commit_range(
         &self,
         _config: &Config,
         from: &str,
         to: &str,
     ) -> Result<CommitContext> {
-        debug!("Getting git info for commit range: {} -> {}", from, to);
+        debug!("Getting git info for commit range: {from} -> {to}");
         let repo = self.open_repo()?;
 
         // Extract commit range info
@@ -603,11 +603,11 @@ impl GitRepo {
     /// A Result containing a Vec of `RecentCommit` objects or an error.
     pub fn get_recent_commits(&self, count: usize) -> Result<Vec<RecentCommit>> {
         let repo = self.open_repo()?;
-        debug!("Fetching {} recent commits", count);
+        debug!("Fetching {count} recent commits");
         let mut revwalk = repo.revwalk()?;
 
         // For fresh repos with no commits, push_head() will fail, so return empty vec
-        if let Err(_) = revwalk.push_head() {
+        if revwalk.push_head().is_err() {
             debug!("No HEAD found (fresh repository), returning empty recent commits");
             return Ok(Vec::new());
         }
@@ -647,14 +647,11 @@ impl GitRepo {
         count: usize,
     ) -> Result<Vec<String>> {
         let repo = self.open_repo()?;
-        debug!(
-            "Fetching {} recent commits for author: {}",
-            count, author_email
-        );
+        debug!("Fetching {count} recent commits for author: {author_email}");
         let mut revwalk = repo.revwalk()?;
 
         // For fresh repos with no commits, push_head() will fail, so return empty vec
-        if let Err(_) = revwalk.push_head() {
+        if revwalk.push_head().is_err() {
             debug!("No HEAD found (fresh repository), returning empty author history");
             return Ok(Vec::new());
         }
@@ -671,7 +668,7 @@ impl GitRepo {
             if author.email() == Some(author_email) {
                 let message = commit.message().unwrap_or_default().to_string();
                 let timestamp = commit.time().seconds().to_string();
-                let hash = format!("{}", oid);
+                let hash = format!("{oid}");
 
                 // Store for caching
                 cached_messages.push(CachedCommitMessage {
@@ -721,12 +718,12 @@ impl GitRepo {
         match commit::commit(&repo, message, self.is_remote) {
             Ok(result) => {
                 if let Err(e) = self.execute_hook("post-commit") {
-                    debug!("Post-commit hook failed: {}", e);
+                    debug!("Post-commit hook failed: {e}");
                 }
                 Ok(result)
             }
             Err(e) => {
-                debug!("Commit failed: {}", e);
+                debug!("Commit failed: {e}");
                 Err(e)
             }
         }
@@ -742,12 +739,12 @@ impl GitRepo {
     /// # Returns
     ///
     /// A Result containing the `CommitContext` or an error.
-    pub async fn get_git_info_for_commit(
+    pub fn get_git_info_for_commit(
         &self,
         _config: &Config,
         commit_id: &str,
     ) -> Result<CommitContext> {
-        debug!("Getting git info for commit: {}", commit_id);
+        debug!("Getting git info for commit: {commit_id}");
         let repo = self.open_repo()?;
 
         // Get branch name
@@ -817,7 +814,10 @@ impl Drop for GitRepo {
     fn drop(&mut self) {
         // The TempDir will be automatically cleaned up when dropped
         if self.is_remote {
-            debug!("Cleaning up temporary repository at {:?}", self.repo_path);
+            debug!(
+                "Cleaning up temporary repository at {}",
+                self.repo_path.display()
+            );
         }
     }
 }

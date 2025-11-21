@@ -36,9 +36,9 @@ where
         loop {
             tokio::select! {
                 _ = rx.recv() => break, // Stop signal received
-                _ = time::sleep(Duration::from_millis(100)) => {
+                () = time::sleep(Duration::from_millis(100)) => {
                     let (frame, message, _color, _width) = spinner.tick();
-                    let _ = write!(stdout, "\r{} {}", frame, message);
+                    let _ = write!(stdout, "\r{frame} {message}");
                     let _ = stdout.flush();
                 }
             }
@@ -55,11 +55,12 @@ where
     let _ = tx.send(()).await;
     spinner_handle.await?;
 
-    Ok(result?)
+    result
 }
 
 #[allow(clippy::fn_params_excessive_bools)]
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_arguments)]
 pub async fn handle_message_command(
     common: CommonParams,
     auto_commit: bool,
@@ -224,6 +225,8 @@ pub async fn handle_pr_command(
 }
 
 /// Handles the commit message completion command
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::fn_params_excessive_bools)]
 pub async fn handle_completion_command(
     common: CommonParams,
     prefix: String,
@@ -244,7 +247,7 @@ pub async fn handle_completion_command(
     // Validate context ratio
     if !(0.0..=1.0).contains(&context_ratio) {
         ui::print_error("Context ratio must be between 0.0 and 1.0");
-        return Err(anyhow::anyhow!("Invalid context ratio: {}", context_ratio));
+        return Err(anyhow::anyhow!("Invalid context ratio: {context_ratio}"));
     }
 
     // Provide helpful information about context ratios

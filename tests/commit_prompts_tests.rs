@@ -39,7 +39,7 @@ fn test_create_user_prompt_includes_recent_commits() {
     // we check that it's not empty after "Recent Commits ("
     let recent_commits_start = prompt.find("Recent Commits (").unwrap();
     let after_start = &prompt[recent_commits_start + "Recent Commits (".len()..];
-    assert!(!after_start.starts_with(")"));
+    assert!(!after_start.starts_with(')'));
 }
 
 #[test]
@@ -144,5 +144,5 @@ fn test_combined_prompt_structure_for_llm() {
 
     // Sanity check exact prompt lengths
     assert_eq!(system_prompt.len(), 1003);
-    assert_eq!(user_prompt.len(), 621);
+    assert_eq!(user_prompt.len(), 660);
 }

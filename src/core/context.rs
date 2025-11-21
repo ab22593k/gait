@@ -2,10 +2,9 @@ use serde::Serialize;
 use std::collections::HashMap;
 use std::fmt;
 
-
+use crate::Config;
 use crate::core::semantic_similarity::SemanticSimilarity;
 use crate::core::token_optimizer::TokenOptimizer;
-use crate::Config;
 
 #[derive(Serialize, Debug, Clone)]
 pub struct CommitContext {
@@ -160,7 +159,8 @@ impl CommitContext {
 
         let similarity_calculator = SemanticSimilarity::new();
         let change_keywords = similarity_calculator.extract_keywords(&self.staged_files);
-        let similarities = similarity_calculator.calculate_similarities(&change_keywords, &self.author_history);
+        let similarities =
+            similarity_calculator.calculate_similarities(&change_keywords, &self.author_history);
 
         similarities
             .into_iter()
@@ -168,8 +168,6 @@ impl CommitContext {
             .map(|(idx, _)| self.author_history[idx].clone())
             .collect()
     }
-
-
 
     /// Detect common commit message conventions from history
     pub fn detect_conventions(&self) -> HashMap<String, usize> {
@@ -212,14 +210,31 @@ impl CommitContext {
     }
 }
 
-
-
 /// Check if a word is an imperative verb commonly used in commit messages
 fn is_imperative_verb(word: &str) -> bool {
     let imperative_verbs = [
-        "add", "update", "fix", "remove", "refactor", "improve", "change", "modify",
-        "create", "delete", "merge", "revert", "implement", "optimize", "clean",
-        "rename", "move", "extract", "introduce", "enhance", "simplify", "document",
+        "add",
+        "update",
+        "fix",
+        "remove",
+        "refactor",
+        "improve",
+        "change",
+        "modify",
+        "create",
+        "delete",
+        "merge",
+        "revert",
+        "implement",
+        "optimize",
+        "clean",
+        "rename",
+        "move",
+        "extract",
+        "introduce",
+        "enhance",
+        "simplify",
+        "document",
     ];
 
     imperative_verbs.contains(&word.to_lowercase().as_str())
@@ -240,10 +255,10 @@ mod tests {
         assert_eq!(buffer.capacity(), 3);
 
         // Add elements
-        assert_eq!(buffer.push(1), true); // Should succeed
-        assert_eq!(buffer.push(2), true); // Should succeed
-        assert_eq!(buffer.push(3), true); // Should succeed
-        assert_eq!(buffer.push(4), false); // Should fail - buffer is full
+        assert!(buffer.push(1)); // Should succeed
+        assert!(buffer.push(2)); // Should succeed
+        assert!(buffer.push(3)); // Should succeed
+        assert!(!buffer.push(4)); // Should fail - buffer is full
 
         // Check length and capacity
         assert_eq!(buffer.len(), 3);

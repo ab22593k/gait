@@ -114,13 +114,11 @@ impl CommitService {
     }
 
     /// Get Git information for a specific commit
+    #[allow(clippy::unused_async)]
     pub async fn get_git_info_for_commit(&self, commit_id: &str) -> Result<CommitContext> {
         debug!("Getting git info for commit: {}", commit_id);
 
-        let context = self
-            .repo
-            .get_git_info_for_commit(&self.config, commit_id)
-            .await?;
+        let context = self.repo.get_git_info_for_commit(&self.config, commit_id)?;
 
         // We don't cache commit-specific contexts
         Ok(context)
@@ -157,8 +155,7 @@ impl CommitService {
                 match self.provider_name.as_str() {
                     "openai" => 16_000,
                     "anthropic" => 100_000,
-                    "groq" => 32_000,
-                    "openrouter" => 32_000,
+                    "groq" | "openrouter" => 32_000,
                     "google" => 1_000_000,
                     _ => 8_000,
                 }
@@ -236,8 +233,9 @@ impl CommitService {
         let system_prompt = create_system_prompt(&config_clone)?;
 
         // Use the shared optimization logic
-        let (_, final_user_prompt) =
-            self.optimize_prompt(&config_clone, &system_prompt, context, create_user_prompt).await;
+        let (_, final_user_prompt) = self
+            .optimize_prompt(&config_clone, &system_prompt, context, create_user_prompt)
+            .await;
 
         let generated_message = llm::get_message::<GeneratedMessage>(
             &config_clone,
@@ -275,8 +273,7 @@ impl CommitService {
         // Get context for the commit range
         let context = self
             .repo
-            .get_git_info_for_commit_range(&self.config, from, to)
-            .await?;
+            .get_git_info_for_commit_range(&self.config, from, to)?;
 
         // Get commit messages for the PR
         let commit_messages = self.repo.get_commits_for_pr(from, to)?;
@@ -285,10 +282,11 @@ impl CommitService {
         let system_prompt = super::prompt::create_pr_system_prompt(&config_clone)?;
 
         // Use the shared optimization logic
-        let (_, final_user_prompt) =
-            self.optimize_prompt(&config_clone, &system_prompt, context, |ctx| {
+        let (_, final_user_prompt) = self
+            .optimize_prompt(&config_clone, &system_prompt, context, |ctx| {
                 super::prompt::create_pr_user_prompt(ctx, &commit_messages)
-            }).await;
+            })
+            .await;
 
         let generated_pr = llm::get_message::<super::types::GeneratedPullRequest>(
             &config_clone,
@@ -324,10 +322,9 @@ impl CommitService {
         config_clone.instructions = instructions.to_string();
 
         // Get context for the branch comparison
-        let context = self
-            .repo
-            .get_git_info_for_branch_diff(&self.config, base_branch, target_branch)
-            .await?;
+        let context =
+            self.repo
+                .get_git_info_for_branch_diff(&self.config, base_branch, target_branch)?;
 
         // Get commit messages for the PR (commits in target_branch not in base_branch)
         let commit_messages = self.repo.get_commits_for_pr(base_branch, target_branch)?;
@@ -336,10 +333,11 @@ impl CommitService {
         let system_prompt = super::prompt::create_pr_system_prompt(&config_clone)?;
 
         // Use the shared optimization logic
-        let (_, final_user_prompt) =
-            self.optimize_prompt(&config_clone, &system_prompt, context, |ctx| {
+        let (_, final_user_prompt) = self
+            .optimize_prompt(&config_clone, &system_prompt, context, |ctx| {
                 super::prompt::create_pr_user_prompt(ctx, &commit_messages)
-            }).await;
+            })
+            .await;
 
         let generated_pr = llm::get_message::<super::types::GeneratedPullRequest>(
             &config_clone,
@@ -383,9 +381,8 @@ impl CommitService {
                 return self
                     .repo
                     .amend_commit(message, commit_ref.unwrap_or("HEAD"));
-            } else {
-                return self.repo.commit(message);
             }
+            return self.repo.commit(message);
         }
 
         // Execute pre-commit hook

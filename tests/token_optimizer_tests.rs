@@ -1,3 +1,4 @@
+use gitai::Config;
 use gitai::core::context::{ChangeType, CommitContext, RecentCommit, StagedFile};
 use gitai::core::token_optimizer::TokenOptimizer;
 
@@ -7,6 +8,10 @@ mod test_utils;
 use test_utils::MockDataBuilder;
 
 const DEBUG: bool = false;
+
+fn create_test_config() -> Config {
+    Config::default()
+}
 
 // Helper function to create a test context with additional commits and files
 fn create_test_context() -> CommitContext {
@@ -42,17 +47,18 @@ fn create_test_context() -> CommitContext {
 }
 
 // Test case for small token limit to ensure diffs and commits are prioritized over full content
-#[test]
-fn test_token_optimizer_prioritize_diffs_and_commits() {
+#[tokio::test]
+async fn test_token_optimizer_prioritize_diffs_and_commits() {
     let mut context = create_test_context();
 
-    let optimizer = TokenOptimizer::new(15).expect("Failed to initialize token optimizer");
+    let config = create_test_config();
+    let optimizer = TokenOptimizer::new(15, config).expect("Failed to initialize token optimizer");
     println!(
         "Original token count: {}",
         count_total_tokens(&context, &optimizer)
     );
 
-    let _ = optimizer.optimize_context(&mut context);
+    let _ = optimizer.optimize_context(&mut context).await;
 
     print_debug_info(&context, &optimizer);
 
@@ -100,12 +106,14 @@ fn test_token_optimizer_prioritize_diffs_and_commits() {
 }
 
 // Test case for large token limit to ensure no content is truncated
-#[test]
-fn test_token_optimizer_large_limit_with_full_content() {
+#[tokio::test]
+async fn test_token_optimizer_large_limit_with_full_content() {
     let mut context = create_test_context();
-    let optimizer = TokenOptimizer::new(1000).expect("Failed to initialize token optimizer");
+    let config = create_test_config();
+    let optimizer =
+        TokenOptimizer::new(1000, config).expect("Failed to initialize token optimizer");
 
-    let _ = optimizer.optimize_context(&mut context);
+    let _ = optimizer.optimize_context(&mut context).await;
 
     let total_tokens = count_total_tokens(&context, &optimizer);
     assert!(
@@ -159,10 +167,12 @@ fn print_debug_info(context: &CommitContext, optimizer: &TokenOptimizer) {
     }
 }
 
-#[test]
-fn test_token_optimizer_realistic_limit() {
+#[tokio::test]
+async fn test_token_optimizer_realistic_limit() {
     let mut context = create_test_context_with_large_data(); // Function that creates the test data
-    let optimizer = TokenOptimizer::new(2000).expect("Failed to initialize token optimizer");
+    let config = create_test_config();
+    let optimizer =
+        TokenOptimizer::new(2000, config).expect("Failed to initialize token optimizer");
 
     println!(
         "Test token count: {}",
@@ -170,7 +180,7 @@ fn test_token_optimizer_realistic_limit() {
     );
 
     // Apply the optimizer to bring the token count within the limit
-    let _ = optimizer.optimize_context(&mut context);
+    let _ = optimizer.optimize_context(&mut context).await;
 
     // Debugging print to verify the final token count
     let total_tokens = count_total_tokens(&context, &optimizer);

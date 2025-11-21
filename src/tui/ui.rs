@@ -1,3 +1,5 @@
+#![allow(clippy::as_conversions)]
+
 use super::state::{Mode, TuiState};
 use ratatui::{
     Frame,
@@ -66,16 +68,14 @@ fn render_sections(f: &mut Frame, state: &mut TuiState, chunks: &[Rect]) {
     draw_status(f, state, chunks[chunk_index]);
 }
 
-fn draw_nav_bar(f: &mut Frame, state: &TuiState, area: Rect) {
-    let nav_items: Vec<(&str, &str)> = match state.mode {
-        _ => vec![
-            ("↔", "Navigate"),
-            ("E", "Message"),
-            ("I", "Instructions"),
-            ("R", "Regenerate"),
-            ("⏎", "Commit"),
-        ],
-    };
+fn draw_nav_bar(f: &mut Frame, _state: &TuiState, area: Rect) {
+    let nav_items: Vec<(&str, &str)> = vec![
+        ("↔", "Navigate"),
+        ("E", "Message"),
+        ("I", "Instructions"),
+        ("R", "Regenerate"),
+        ("⏎", "Commit"),
+    ];
 
     let nav_spans = nav_items
         .iter()
@@ -88,7 +88,7 @@ fn draw_nav_bar(f: &mut Frame, state: &TuiState, area: Rect) {
                         .fg(ACCENT_COLOR)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(format!(" {}", desc), Style::default().fg(Color::Gray)),
+                Span::styled(format!(" {desc}"), Style::default().fg(Color::Gray)),
             ];
 
             if i < nav_items.len() - 1 {
@@ -268,6 +268,7 @@ fn create_centered_status_line(
     ])
 }
 
+#[allow(clippy::too_many_lines)]
 fn draw_help(f: &mut Frame, _state: &mut TuiState, area: Rect) {
     let help_text = vec![
         Line::from(vec![Span::styled(
@@ -408,7 +409,9 @@ fn draw_completion(f: &mut Frame, state: &mut TuiState, area: Rect) {
 
     for (i, suggestion) in state.completion_suggestions.iter().enumerate() {
         let style = if i == state.completion_index {
-            Style::default().fg(SUCCESS_COLOR).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(SUCCESS_COLOR)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::Gray)
         };

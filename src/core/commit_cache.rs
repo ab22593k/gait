@@ -4,8 +4,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-
-
 /// Represents a cached commit message with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedCommitMessage {
@@ -17,7 +15,7 @@ pub struct CachedCommitMessage {
 /// Cache for commit messages organized by author and repository
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CommitMessageCache {
-    /// Maps "author_email:repo_path" -> list of commit messages
+    /// Maps `"author_email:repo_path"` -> list of commit messages
     cache: HashMap<String, Vec<CachedCommitMessage>>,
     cache_dir: PathBuf,
 }
@@ -49,22 +47,29 @@ impl CommitMessageCache {
     }
 
     /// Get commit messages for a specific author and repository
-    pub fn get_commit_messages(&self, author_email: &str, repo_path: &str) -> Vec<CachedCommitMessage> {
-        let key = format!("{}:{}", author_email, repo_path);
-        self.cache
-            .get(&key)
-            .cloned()
-            .unwrap_or_default()
+    pub fn get_commit_messages(
+        &self,
+        author_email: &str,
+        repo_path: &str,
+    ) -> Vec<CachedCommitMessage> {
+        let key = format!("{author_email}:{repo_path}");
+        self.cache.get(&key).cloned().unwrap_or_default()
     }
 
     /// Add commit messages for a specific author and repository
-    pub fn add_commit_messages(&mut self, author_email: &str, repo_path: &str, messages: Vec<CachedCommitMessage>) {
-        let key = format!("{}:{}", author_email, repo_path);
-        let existing = self.cache.entry(key).or_insert_with(Vec::new);
+    pub fn add_commit_messages(
+        &mut self,
+        author_email: &str,
+        repo_path: &str,
+        messages: Vec<CachedCommitMessage>,
+    ) {
+        const MAX_MESSAGES_PER_AUTHOR_REPO: usize = 1000;
+
+        let key = format!("{author_email}:{repo_path}");
+        let existing = self.cache.entry(key).or_default();
         existing.extend(messages);
 
         // Keep only the most recent messages (limit to prevent unbounded growth)
-        const MAX_MESSAGES_PER_AUTHOR_REPO: usize = 1000;
         if existing.len() > MAX_MESSAGES_PER_AUTHOR_REPO {
             // Sort by timestamp (most recent first) and keep only the latest
             existing.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
@@ -91,16 +96,19 @@ impl CommitMessageCache {
 
     /// Clear cache for a specific repository
     pub fn clear_repo_cache(&mut self, repo_path: &str) {
-        self.cache.retain(|key, _| key.split(':').nth(1) != Some(repo_path));
+        self.cache
+            .retain(|key, _| key.split(':').nth(1) != Some(repo_path));
     }
 
     /// Get cache statistics
     pub fn get_stats(&self) -> CacheStats {
-        let total_messages = self.cache.values().map(|msgs| msgs.len()).sum();
+        let total_messages = self.cache.values().map(Vec::len).sum();
         let total_authors = self.cache.len();
-        let repos: std::collections::HashSet<_> = self.cache.keys().map(|key| {
-            key.split(':').nth(1).unwrap_or("")
-        }).collect();
+        let repos: std::collections::HashSet<_> = self
+            .cache
+            .keys()
+            .map(|key| key.split(':').nth(1).unwrap_or(""))
+            .collect();
         let total_repos = repos.len();
 
         CacheStats {

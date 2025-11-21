@@ -1,3 +1,6 @@
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::as_conversions)]
+
 use super::prompt::{create_completion_system_prompt, create_completion_user_prompt};
 use super::types::GeneratedMessage;
 use crate::config::Config;
@@ -89,7 +92,11 @@ impl CompletionService {
     /// # Returns
     ///
     /// A Result containing the generated completion or an error
-    pub async fn complete_message(&self, prefix: &str, context_ratio: f32) -> anyhow::Result<GeneratedMessage> {
+    pub async fn complete_message(
+        &self,
+        prefix: &str,
+        context_ratio: f32,
+    ) -> anyhow::Result<GeneratedMessage> {
         let mut config_clone = self.config.clone();
 
         // Set instructions to include completion context
@@ -109,10 +116,11 @@ impl CompletionService {
         let system_prompt = create_completion_system_prompt(&config_clone)?;
 
         // Use the shared optimization logic
-        let (_, final_user_prompt) =
-            self.optimize_prompt(&config_clone, &system_prompt, context, |ctx| {
+        let (_, final_user_prompt) = self
+            .optimize_prompt(&config_clone, &system_prompt, context, |ctx| {
                 create_completion_user_prompt(ctx, prefix, context_ratio)
-            }).await;
+            })
+            .await;
 
         let generated_message = llm::get_message::<GeneratedMessage>(
             &config_clone,
@@ -156,8 +164,7 @@ impl CompletionService {
                 match self.provider_name.as_str() {
                     "openai" => 16_000,
                     "anthropic" => 100_000,
-                    "groq" => 32_000,
-                    "openrouter" => 32_000,
+                    "groq" | "openrouter" => 32_000,
                     "google" => 1_000_000,
                     _ => 8_000,
                 }
@@ -245,6 +252,7 @@ impl CompletionService {
                 return self
                     .repo
                     .amend_commit(message, commit_ref.unwrap_or("HEAD"));
+            }
             return self.repo.commit(message);
         }
 

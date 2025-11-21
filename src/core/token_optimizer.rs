@@ -1,6 +1,6 @@
-use crate::{core::context::CommitContext, config::Config};
-use tiktoken_rs::cl100k_base;
+use crate::{config::Config, core::context::CommitContext};
 use log::debug;
+use tiktoken_rs::cl100k_base;
 
 pub struct TokenOptimizer {
     encoder: tiktoken_rs::CoreBPE,
@@ -44,7 +44,7 @@ impl TokenOptimizer {
 
         Ok(Self {
             encoder,
-            max_tokens: 0, // Not used for counting
+            max_tokens: 0,             // Not used for counting
             config: Config::default(), // Not used for counting
         })
     }
@@ -109,10 +109,7 @@ impl TokenOptimizer {
             let commit_tokens = self.count_tokens(&commit.message);
 
             if commit_tokens > remaining {
-                debug!(
-                    "Truncating commit message from {} to {} tokens",
-                    commit_tokens, remaining
-                );
+                debug!("Truncating commit message from {commit_tokens} to {remaining} tokens");
                 commit.message = self.truncate_string(&commit.message, remaining)?;
                 return Ok(0);
             }
@@ -206,33 +203,45 @@ impl TokenOptimizer {
     /// Summarize text using LLM
     async fn summarize_text(&self, text: &str, max_tokens: usize) -> Result<String, TokenError> {
         let system_prompt = "You are a code diff summarizer. Provide a concise summary of the changes in the given diff, focusing on what was added, modified, or removed.";
-        let user_prompt = format!("Summarize the following diff in {} tokens or less:\n\n{}", max_tokens, text);
+        let user_prompt =
+            format!("Summarize the following diff in {max_tokens} tokens or less:\n\n{text}");
 
         match crate::core::llm::get_message::<String>(
             &self.config,
             &self.config.default_provider,
             system_prompt,
             &user_prompt,
-        ).await {
+        )
+        .await
+        {
             Ok(summary) => Ok(summary),
-            Err(e) => Err(TokenError::EncodingFailed(format!("Summarization failed: {}", e))),
+            Err(e) => Err(TokenError::EncodingFailed(format!(
+                "Summarization failed: {e}"
+            ))),
         }
     }
 
     /// Perform hierarchical summarization (map-reduce) on large text
-    async fn hierarchical_summarize(&self, text: &str, max_tokens: usize) -> Result<String, TokenError> {
+    async fn hierarchical_summarize(
+        &self,
+        text: &str,
+        max_tokens: usize,
+    ) -> Result<String, TokenError> {
         // Try to summarize, but fall back to truncation if LLM fails
-        match self.try_hierarchical_summarize(text, max_tokens).await {
-            Ok(summary) => Ok(summary),
-            Err(_) => {
-                // Fallback to truncation
-                debug!("Summarization failed, falling back to truncation");
-                self.truncate_string(text, max_tokens)
-            }
+        if let Ok(summary) = self.try_hierarchical_summarize(text, max_tokens).await {
+            Ok(summary)
+        } else {
+            // Fallback to truncation
+            debug!("Summarization failed, falling back to truncation");
+            self.truncate_string(text, max_tokens)
         }
     }
 
-    async fn try_hierarchical_summarize(&self, text: &str, max_tokens: usize) -> Result<String, TokenError> {
+    async fn try_hierarchical_summarize(
+        &self,
+        text: &str,
+        max_tokens: usize,
+    ) -> Result<String, TokenError> {
         // Split text into chunks that fit within LLM context
         let chunk_size = 4000; // Conservative chunk size for LLM input
         let chunks: Vec<&str> = text
@@ -250,7 +259,9 @@ impl TokenOptimizer {
         // Map: Summarize each chunk
         let mut chunk_summaries = Vec::new();
         for chunk in &chunks {
-            let summary = self.summarize_text(chunk, max_tokens / chunks.len()).await?;
+            let summary = self
+                .summarize_text(chunk, max_tokens / chunks.len())
+                .await?;
             chunk_summaries.push(summary);
         }
 
