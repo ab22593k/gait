@@ -1,4 +1,4 @@
-![Git Smart workflow logo](assets/gitsw.png)
+![Git Smart workflow logo](assets/gait.png)
 
 # Git workflow
 
