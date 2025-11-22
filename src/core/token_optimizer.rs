@@ -27,6 +27,20 @@ impl std::fmt::Display for TokenError {
 
 impl std::error::Error for TokenError {}
 
+#[derive(Debug)]
+struct ContextItem {
+    item_type: ContextItemType,
+    token_count: usize,
+    importance: f32,
+}
+
+#[derive(Debug)]
+enum ContextItemType {
+    Diff { file_index: usize },
+    Commit { commit_index: usize },
+    Content { file_index: usize },
+}
+
 impl TokenOptimizer {
     pub fn new(max_tokens: usize, config: Config) -> Result<Self, TokenError> {
         let encoder = cl100k_base().map_err(|e| TokenError::EncoderInit(e.to_string()))?;
@@ -50,99 +64,127 @@ impl TokenOptimizer {
     }
 
     pub async fn optimize_context(&self, context: &mut CommitContext) -> Result<(), TokenError> {
+        // Calculate importance scores for all context items
+        let mut context_items = Vec::new();
+
+        // Add diffs with importance scores
+        for (i, file) in context.staged_files.iter().enumerate() {
+            let token_count = self.count_tokens(&file.diff);
+            // Importance = token_count (larger diffs are more important)
+            let importance = token_count as f32;
+            context_items.push(ContextItem {
+                item_type: ContextItemType::Diff { file_index: i },
+                token_count,
+                importance,
+            });
+        }
+
+        // Add commits with importance scores
+        for (i, commit) in context.recent_commits.iter().enumerate() {
+            let token_count = self.count_tokens(&commit.message);
+            // Importance = similarity score (from filtering) * recency factor
+            // Since we don't have stored similarity scores, use a heuristic:
+            // importance = token_count * (position_factor to prefer earlier commits)
+            let position_factor = 1.0 / (i + 1) as f32; // Earlier commits are more important
+            let importance = token_count as f32 * position_factor;
+            context_items.push(ContextItem {
+                item_type: ContextItemType::Commit { commit_index: i },
+                token_count,
+                importance,
+            });
+        }
+
+        // Add file contents with importance scores
+        for (i, file) in context.staged_files.iter().enumerate() {
+            if let Some(content) = &file.content {
+                let token_count = self.count_tokens(content);
+                // Importance = token_count * relevance_factor
+                // Files that are staged are more relevant
+                let relevance_factor = if context.staged_files.iter().any(|f| f.path == file.path) { 1.0 } else { 0.5 };
+                let importance = token_count as f32 * relevance_factor;
+                context_items.push(ContextItem {
+                    item_type: ContextItemType::Content { file_index: i },
+                    token_count,
+                    importance,
+                });
+            }
+        }
+
+        // Sort by importance (highest first)
+        context_items.sort_by(|a, b| b.importance.partial_cmp(&a.importance).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Allocate tokens proportionally based on importance
+        let total_importance: f32 = context_items.iter().map(|item| item.importance).sum();
         let mut remaining_tokens = self.max_tokens;
 
-        // Step 1: Process diffs (highest priority)
-        remaining_tokens = self.optimize_diffs(context, remaining_tokens).await?;
-        if remaining_tokens == 0 {
-            debug!("Token budget exhausted after diffs, clearing commits and contents");
-            Self::clear_commits_and_contents(context);
-            return Ok(());
+        for item in &context_items {
+            if remaining_tokens == 0 {
+                break;
+            }
+
+            let allocated_tokens = if total_importance > 0.0 {
+                ((item.importance / total_importance) * self.max_tokens as f32) as usize
+            } else {
+                0
+            }.min(item.token_count).min(remaining_tokens);
+
+            if allocated_tokens < item.token_count {
+                // Need to truncate this item
+                match &item.item_type {
+                    ContextItemType::Diff { file_index } => {
+                        if let Some(file) = context.staged_files.get_mut(*file_index) {
+                            debug!("Truncating diff for {path} from {original} to {allocated} tokens",
+                                 path = file.path, original = item.token_count, allocated = allocated_tokens);
+                            file.diff = self.truncate_string(&file.diff, allocated_tokens)?;
+                        }
+                    }
+                    ContextItemType::Commit { commit_index } => {
+                        if let Some(commit) = context.recent_commits.get_mut(*commit_index) {
+                            debug!("Truncating commit message from {original} to {allocated} tokens",
+                                 original = item.token_count, allocated = allocated_tokens);
+                            commit.message = self.truncate_string(&commit.message, allocated_tokens)?;
+                        }
+                    }
+                    ContextItemType::Content { file_index } => {
+                        if let Some(file) = context.staged_files.get_mut(*file_index) {
+                            if let Some(content) = &mut file.content {
+                                debug!("Truncating content for {path} from {original} to {allocated} tokens",
+                                     path = file.path, original = item.token_count, allocated = allocated_tokens);
+                                *content = self.truncate_string(content, allocated_tokens)?;
+                            }
+                        }
+                    }
+                }
+            }
+
+            remaining_tokens = remaining_tokens.saturating_sub(allocated_tokens);
         }
 
-        // Step 2: Process commits (medium priority)
-        remaining_tokens = self.optimize_commits(context, remaining_tokens)?;
+        // Clear any remaining items that didn't get tokens
         if remaining_tokens == 0 {
-            debug!("Token budget exhausted after commits, clearing contents");
-            Self::clear_contents(context);
-            return Ok(());
+            // Clear remaining low-importance items
+            for item in context_items.iter().skip_while(|item| {
+                match &item.item_type {
+                    ContextItemType::Diff { .. } => true,
+                    ContextItemType::Commit { .. } => true,
+                    ContextItemType::Content { .. } => false,
+                }
+            }) {
+                if let ContextItemType::Content { file_index } = &item.item_type {
+                    if let Some(file) = context.staged_files.get_mut(*file_index) {
+                        file.content = None;
+                        file.content_excluded = true;
+                    }
+                }
+            }
         }
 
-        // Step 3: Process file contents (lowest priority)
-        self.optimize_contents(context, remaining_tokens)?;
-
-        debug!("Final token count: {}", self.max_tokens - remaining_tokens);
+        debug!("Optimized context with importance weighting, final token usage: {}", self.max_tokens - remaining_tokens);
 
         Ok(())
     }
 
-    // Optimize diffs and return remaining tokens
-    async fn optimize_diffs(
-        &self,
-        context: &mut CommitContext,
-        mut remaining: usize,
-    ) -> Result<usize, TokenError> {
-        for file in &mut context.staged_files {
-            let diff_tokens = self.count_tokens(&file.diff);
 
-            if diff_tokens > remaining {
-                debug!(
-                    "Summarizing diff for {} from {} to {} tokens",
-                    file.path, diff_tokens, remaining
-                );
-                file.diff = self.hierarchical_summarize(&file.diff, remaining).await?;
-                return Ok(0);
-            }
-
-            remaining = remaining.saturating_sub(diff_tokens);
-        }
-        Ok(remaining)
-    }
-
-    // Optimize commits and return remaining tokens
-    fn optimize_commits(
-        &self,
-        context: &mut CommitContext,
-        mut remaining: usize,
-    ) -> Result<usize, TokenError> {
-        for commit in &mut context.recent_commits {
-            let commit_tokens = self.count_tokens(&commit.message);
-
-            if commit_tokens > remaining {
-                debug!("Truncating commit message from {commit_tokens} to {remaining} tokens");
-                commit.message = self.truncate_string(&commit.message, remaining)?;
-                return Ok(0);
-            }
-
-            remaining = remaining.saturating_sub(commit_tokens);
-        }
-        Ok(remaining)
-    }
-
-    // Optimize file contents and return remaining tokens
-    fn optimize_contents(
-        &self,
-        context: &mut CommitContext,
-        mut remaining: usize,
-    ) -> Result<usize, TokenError> {
-        for file in &mut context.staged_files {
-            if let Some(content) = &mut file.content {
-                let content_tokens = self.count_tokens(content);
-
-                if content_tokens > remaining {
-                    debug!(
-                        "Truncating file content for {} from {} to {} tokens",
-                        file.path, content_tokens, remaining
-                    );
-                    *content = self.truncate_string(content, remaining)?;
-                    return Ok(0);
-                }
-
-                remaining = remaining.saturating_sub(content_tokens);
-            }
-        }
-        Ok(remaining)
-    }
 
     pub fn truncate_string(&self, s: &str, max_tokens: usize) -> Result<String, TokenError> {
         let tokens = self.encoder.encode_ordinary(s);
@@ -173,27 +215,7 @@ impl TokenOptimizer {
             .map_err(|e| TokenError::DecodingFailed(e.to_string()))
     }
 
-    #[inline]
-    fn clear_commits_and_contents(context: &mut CommitContext) {
-        Self::clear_commits(context);
-        Self::clear_contents(context);
-    }
 
-    #[inline]
-    fn clear_commits(context: &mut CommitContext) {
-        context
-            .recent_commits
-            .iter_mut()
-            .for_each(|c| c.message.clear());
-    }
-
-    #[inline]
-    fn clear_contents(context: &mut CommitContext) {
-        context
-            .staged_files
-            .iter_mut()
-            .for_each(|f| f.content = None);
-    }
 
     #[inline]
     pub fn count_tokens(&self, s: &str) -> usize {

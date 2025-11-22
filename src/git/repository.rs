@@ -453,11 +453,14 @@ impl GitRepo {
         debug!("Getting git info for repo path: {}", repo.path().display());
 
         let branch = self.get_current_branch()?;
-        let recent_commits = self.get_recent_commits(5)?;
+        let recent_commits = self.get_recent_commits(10)?;
         let staged_files = get_file_statuses(&repo, &self.gitignore_matcher)?;
 
         // Create and return the context
         let mut context = self.create_commit_context(branch, recent_commits, staged_files)?;
+
+        // Filter recent commits to most relevant ones (max 4)
+        context.filter_relevant_recent_commits(4);
 
         // Enhance with cached commit messages
         self.enhance_context_with_cache(&mut context, config)?;
@@ -490,7 +493,7 @@ impl GitRepo {
         );
 
         let branch = self.get_current_branch()?;
-        let recent_commits = self.get_recent_commits(5)?;
+        let recent_commits = self.get_recent_commits(10)?;
         let mut staged_files = get_file_statuses(&repo, &self.gitignore_matcher)?;
 
         // Add unstaged files if requested
@@ -502,6 +505,9 @@ impl GitRepo {
 
         // Create and return the context
         let mut context = self.create_commit_context(branch, recent_commits, staged_files)?;
+
+        // Filter recent commits to most relevant ones (max 4)
+        context.filter_relevant_recent_commits(4);
 
         // Enhance with cached commit messages
         self.enhance_context_with_cache(&mut context, config)?;
