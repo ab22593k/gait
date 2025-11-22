@@ -222,3 +222,140 @@ impl TuiState {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::context::{ChangeType, RecentCommit, StagedFile};
+
+    #[test]
+    fn test_get_filtered_context_filters_files_and_commits() {
+        // Create a mock context
+        let context = CommitContext {
+            branch: "main".to_string(),
+            recent_commits: vec![
+                RecentCommit {
+                    hash: "abc123".to_string(),
+                    message: "First commit".to_string(),
+                    author: "Test User".to_string(),
+                    timestamp: "1234567890".to_string(),
+                },
+                RecentCommit {
+                    hash: "def456".to_string(),
+                    message: "Second commit".to_string(),
+                    author: "Test User".to_string(),
+                    timestamp: "1234567891".to_string(),
+                },
+            ],
+            staged_files: vec![
+                StagedFile {
+                    path: "file1.txt".to_string(),
+                    change_type: ChangeType::Modified,
+                    diff: "+ change".to_string(),
+                    content: None,
+                    content_excluded: false,
+                },
+                StagedFile {
+                    path: "file2.txt".to_string(),
+                    change_type: ChangeType::Added,
+                    diff: "+ new file".to_string(),
+                    content: None,
+                    content_excluded: false,
+                },
+            ],
+            user_name: "Test User".to_string(),
+            user_email: "test@example.com".to_string(),
+            author_history: vec![],
+        };
+
+        let mut state = TuiState::new(vec![], "test".to_string());
+        state.initialize_context(context);
+
+        // Initially all should be selected
+        assert_eq!(state.selected_files.len(), 2);
+        assert_eq!(state.selected_commits.len(), 2);
+        assert!(state.selected_files.iter().all(|&x| x));
+        assert!(state.selected_commits.iter().all(|&x| x));
+
+        // Deselect first file and first commit
+        state.selected_files[0] = false;
+        state.selected_commits[0] = false;
+
+        let filtered = state.get_filtered_context().unwrap();
+
+        // Should have 1 file and 1 commit
+        assert_eq!(filtered.staged_files.len(), 1);
+        assert_eq!(filtered.recent_commits.len(), 1);
+        assert_eq!(filtered.staged_files[0].path, "file2.txt");
+        assert_eq!(filtered.recent_commits[0].hash, "def456");
+    }
+
+    #[test]
+    fn test_get_filtered_context_returns_none_when_no_context() {
+        let state = TuiState::new(vec![], "test".to_string());
+        assert!(state.get_filtered_context().is_none());
+    }
+
+    #[test]
+    fn test_toggle_current_selection_files() {
+        let context = CommitContext {
+            branch: "main".to_string(),
+            recent_commits: vec![],
+            staged_files: vec![StagedFile {
+                path: "file1.txt".to_string(),
+                change_type: ChangeType::Modified,
+                diff: "+ change".to_string(),
+                content: None,
+                content_excluded: false,
+            }],
+            user_name: "Test User".to_string(),
+            user_email: "test@example.com".to_string(),
+            author_history: vec![],
+        };
+
+        let mut state = TuiState::new(vec![], "test".to_string());
+        state.initialize_context(context);
+        state.context_selection_category = ContextSelectionCategory::Files;
+        state.context_selection_index = 0;
+
+        // Initially selected
+        assert!(state.selected_files[0]);
+
+        // Toggle to deselect
+        state.toggle_current_selection();
+        assert!(!state.selected_files[0]);
+
+        // Toggle back to select
+        state.toggle_current_selection();
+        assert!(state.selected_files[0]);
+    }
+
+    #[test]
+    fn test_toggle_current_selection_commits() {
+        let context = CommitContext {
+            branch: "main".to_string(),
+            recent_commits: vec![RecentCommit {
+                hash: "abc123".to_string(),
+                message: "First commit".to_string(),
+                author: "Test User".to_string(),
+                timestamp: "1234567890".to_string(),
+            }],
+            staged_files: vec![],
+            user_name: "Test User".to_string(),
+            user_email: "test@example.com".to_string(),
+            author_history: vec![],
+        };
+
+        let mut state = TuiState::new(vec![], "test".to_string());
+        state.initialize_context(context);
+        state.context_selection_category = ContextSelectionCategory::Commits;
+        state.context_selection_index = 0; // This should point to the first commit
+
+        // Initially selected
+        assert!(state.selected_commits[0]);
+
+        // Toggle to deselect
+        state.toggle_current_selection();
+        assert!(!state.selected_commits[0]);
+    }
+}

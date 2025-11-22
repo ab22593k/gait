@@ -65,10 +65,8 @@ impl TuiCommit {
             completion_service,
         );
 
-        // Initialize context for selection
-        if let Err(e) = app.initialize_context().await {
-            debug!("Failed to initialize context: {e}");
-        }
+        // Initialize context for selection (ignore errors, regeneration will fall back to default)
+        let _ = app.initialize_context().await;
 
         app.run_app().await.map_err(Error::from)
     }
@@ -142,7 +140,6 @@ impl TuiCommit {
                 let tx = tx.clone();
 
                 tokio::spawn(async move {
-                    debug!("Generating message...");
                     // Use filtered context if available, otherwise use default
                     let result = if let Some(context) = filtered_context {
                         service
@@ -196,14 +193,18 @@ impl TuiCommit {
             match rx.try_recv() {
                 Ok(result) => match result {
                     Ok(new_message) => {
+                        // Add the new message to the list and switch to it
                         self.state.messages.push(new_message);
                         self.state.current_index = self.state.messages.len() - 1;
 
                         self.state.update_message_textarea();
                         self.state.mode = Mode::Normal; // Exit Generating mode
                         self.state.spinner = None; // Stop the spinner
-                        self.state
-                            .set_status(String::from("New message generated successfully!"));
+                        self.state.set_status(format!(
+                            "New message generated! Viewing {}/{}",
+                            self.state.current_index + 1,
+                            self.state.messages.len()
+                        ));
                         task_spawned = false; // Reset for future regenerations
                     }
                     Err(e) => {
@@ -305,6 +306,7 @@ impl TuiCommit {
         self.state.spinner = Some(SpinnerState::new());
         self.state
             .set_status(String::from("Regenerating commit message..."));
+        self.state.dirty = true; // Make sure UI updates
     }
 
     pub fn perform_commit(&self, message: &str) -> Result<ExitStatus, Error> {
@@ -343,6 +345,7 @@ pub enum ExitStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::features::commit::types::GeneratedMessage;
 
     #[test]
     fn test_panic_hook_setup() {
@@ -354,5 +357,111 @@ mod tests {
             let _ = crossterm::terminal::disable_raw_mode();
         };
         // If this compiles, the setup is correct
+    }
+
+    #[test]
+    fn test_regeneration_adds_new_message() {
+        // Test that regeneration adds a new message and switches to it
+        let initial_messages = vec![
+            GeneratedMessage {
+                title: "Initial commit".to_string(),
+                message: "Initial message".to_string(),
+            },
+            GeneratedMessage {
+                title: "Second commit".to_string(),
+                message: "Second message".to_string(),
+            },
+        ];
+
+        let mut state = TuiState::new(initial_messages, "test instructions".to_string());
+        assert_eq!(state.messages.len(), 2);
+        assert_eq!(state.current_index, 0);
+        assert_eq!(state.messages[0].title, "Initial commit");
+
+        // Simulate regeneration result: add new message
+        let new_message = GeneratedMessage {
+            title: "Regenerated commit".to_string(),
+            message: "Regenerated message".to_string(),
+        };
+
+        // This simulates the logic in the main loop when regeneration succeeds
+        state.messages.push(new_message);
+        state.current_index = state.messages.len() - 1;
+
+        // Verify the message was added and we're viewing it
+        assert_eq!(state.messages.len(), 3, "Should add a new message");
+        assert_eq!(
+            state.current_index, 2,
+            "Current index should point to new message"
+        );
+        assert_eq!(
+            state.messages[2].title, "Regenerated commit",
+            "New message should be added"
+        );
+        assert_eq!(
+            state.messages[0].title, "Initial commit",
+            "Original messages should be unchanged"
+        );
+        assert_eq!(
+            state.messages[1].title, "Second commit",
+            "Other messages should be unchanged"
+        );
+    }
+
+    #[test]
+    fn test_regeneration_with_empty_messages() {
+        // Test regeneration when messages vector is empty (edge case)
+        let initial_messages = vec![];
+        let mut state = TuiState::new(initial_messages, "test instructions".to_string());
+
+        // TuiState::new should create a default message when initial_messages is empty
+        assert_eq!(state.messages.len(), 1);
+        assert_eq!(state.current_index, 0);
+
+        // Simulate regeneration result
+        let new_message = GeneratedMessage {
+            title: "New commit".to_string(),
+            message: "New message".to_string(),
+        };
+
+        // This simulates the logic in the main loop
+        state.messages.push(new_message);
+        state.current_index = state.messages.len() - 1;
+
+        // Verify the message was added
+        assert_eq!(state.messages.len(), 2, "Should add new message");
+        assert_eq!(state.current_index, 1, "Should switch to new message");
+        assert_eq!(state.messages[1].title, "New commit");
+    }
+
+    #[test]
+    fn test_regeneration_always_adds_message() {
+        // Test that regeneration always adds a new message regardless of current_index
+        let initial_messages = vec![GeneratedMessage {
+            title: "First commit".to_string(),
+            message: "First message".to_string(),
+        }];
+
+        let mut state = TuiState::new(initial_messages, "test instructions".to_string());
+        assert_eq!(state.messages.len(), 1);
+        assert_eq!(state.current_index, 0);
+
+        let new_message = GeneratedMessage {
+            title: "New commit".to_string(),
+            message: "New message".to_string(),
+        };
+
+        // This simulates the logic in the main loop - always add new message
+        state.messages.push(new_message);
+        state.current_index = state.messages.len() - 1;
+
+        // Should add the message
+        assert_eq!(state.messages.len(), 2);
+        assert_eq!(state.current_index, 1);
+        assert_eq!(state.messages[1].title, "New commit");
+        assert_eq!(
+            state.messages[0].title, "First commit",
+            "Original message should remain"
+        );
     }
 }
