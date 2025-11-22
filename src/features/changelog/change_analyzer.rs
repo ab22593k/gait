@@ -6,6 +6,7 @@ use anyhow::Result;
 use git2::{Diff, Oid};
 use regex::Regex;
 use std::sync::Arc;
+use tokio::sync::mpsc;
 
 // Regex for extracting issue numbers (e.g., #123, GH-123)
 static ISSUE_RE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
@@ -54,26 +55,30 @@ impl ChangeAnalyzer {
         Ok(Self { git_repo })
     }
 
-    /// Analyze commits between two Git references
-    pub fn analyze_commits(&self, from: &str, to: &str) -> Result<Vec<AnalyzedChange>> {
-        self.git_repo
-            .get_commits_between_with_callback(from, to, |commit| self.analyze_commit(commit))
-    }
-
-    /// Analyze changes between two Git references and return the analyzed changes along with total metrics
-    pub fn analyze_changes(
+    /// Analyze commits between two Git references, streaming results via channel
+    pub async fn analyze_commits(
         &self,
         from: &str,
         to: &str,
-    ) -> Result<(Vec<AnalyzedChange>, ChangeMetrics)> {
-        let analyzed_changes = self.analyze_commits(from, to)?;
-        let total_metrics = self.calculate_total_metrics(&analyzed_changes);
-        Ok((analyzed_changes, total_metrics))
+        tx: mpsc::Sender<Result<AnalyzedChange>>,
+    ) -> Result<()> {
+        let git_repo = self.git_repo.clone();
+        let from = from.to_string();
+        let to = to.to_string();
+        let _ = tokio::task::spawn_blocking(move || {
+            git_repo.get_commits_between_stream(&from, &to, |commit| {
+                let analyzed = Self::analyze_commit_inner(&git_repo, commit)?;
+                let _ = tx.blocking_send(Ok(analyzed));
+                Ok(())
+            })
+        })
+        .await?;
+        Ok(())
     }
 
-    /// Analyze a single commit
-    fn analyze_commit(&self, commit: &RecentCommit) -> Result<AnalyzedChange> {
-        let repo = self.git_repo.open_repo()?;
+    /// Analyze a single commit (blocking)
+    fn analyze_commit_inner(git_repo: &GitRepo, commit: &RecentCommit) -> Result<AnalyzedChange> {
+        let repo = git_repo.open_repo()?;
         let commit_obj = repo.find_commit(Oid::from_str(&commit.hash)?)?;
 
         let parent_tree = if commit_obj.parent_count() > 0 {
@@ -105,6 +110,26 @@ impl ChangeAnalyzer {
             associated_issues,
             pull_request,
         })
+    }
+
+    /// Analyze changes between two Git references and return the analyzed changes along with total metrics
+    pub async fn analyze_changes(
+        &self,
+        from: &str,
+        to: &str,
+    ) -> Result<(Vec<AnalyzedChange>, ChangeMetrics)> {
+        let (tx, mut rx) = mpsc::channel(100);
+        let analyze_task = self.analyze_commits(from, to, tx);
+        let collect_task = async {
+            let mut analyzed_changes = Vec::new();
+            while let Some(result) = rx.recv().await {
+                analyzed_changes.push(result?);
+            }
+            Ok(analyzed_changes)
+        };
+        let ((), analyzed_changes) = tokio::try_join!(analyze_task, collect_task)?;
+        let total_metrics = self.calculate_total_metrics(&analyzed_changes);
+        Ok((analyzed_changes, total_metrics))
     }
 
     /// Analyze changes for each file in the commit

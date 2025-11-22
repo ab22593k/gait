@@ -780,6 +780,15 @@ impl GitRepo {
         commit::get_commits_between_with_callback(&repo, from, to, callback)
     }
 
+    /// Stream commits between two references with a callback
+    pub fn get_commits_between_stream<F>(&self, from: &str, to: &str, callback: F) -> Result<()>
+    where
+        F: FnMut(&RecentCommit) -> Result<()>,
+    {
+        let repo = self.open_repo()?;
+        commit::get_commits_between_stream(&repo, from, to, callback)
+    }
+
     /// Commit changes to the repository
     pub fn commit(&self, message: &str) -> Result<CommitResult> {
         let repo = self.open_repo()?;

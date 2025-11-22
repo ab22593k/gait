@@ -32,10 +32,7 @@ where
     let analyzer = ChangeAnalyzer::new(git_repo.clone())?;
 
     // Get analyzed changes
-    let analyzed_changes = analyzer.analyze_commits(from, to)?;
-
-    // Get metrics
-    let total_metrics = analyzer.calculate_total_metrics(&analyzed_changes);
+    let (analyzed_changes, total_metrics) = analyzer.analyze_changes(from, to).await?;
 
     // Get README summary for context
     let provider_name = &config.default_provider;

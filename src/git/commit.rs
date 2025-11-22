@@ -282,6 +282,47 @@ where
         .collect()
 }
 
+/// Stream commits between two references with a callback that sends results
+///
+/// # Returns
+///
+/// A Result indicating success or an error.
+pub fn get_commits_between_stream<F>(
+    repo: &Repository,
+    from: &str,
+    to: &str,
+    mut callback: F,
+) -> Result<()>
+where
+    F: FnMut(&RecentCommit) -> Result<()>,
+{
+    let from_commit = repo.revparse_single(from)?.peel_to_commit()?;
+    let to_commit = repo.revparse_single(to)?.peel_to_commit()?;
+
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push(to_commit.id())?;
+    revwalk.hide(from_commit.id())?;
+
+    for oid in revwalk {
+        let oid = oid?;
+        let commit = repo.find_commit(oid)?;
+        let commit_message = commit.message().unwrap_or("").to_string();
+        let author = commit.author().name().unwrap_or("").to_string();
+        let timestamp = commit.time().seconds().to_string();
+
+        let recent_commit = RecentCommit {
+            hash: oid.to_string(),
+            message: commit_message,
+            author,
+            timestamp,
+        };
+
+        callback(&recent_commit)?;
+    }
+
+    Ok(())
+}
+
 /// Retrieves the files changed in a specific commit
 ///
 /// # Arguments
