@@ -65,33 +65,6 @@ struct MessageArgs {
         requires = "complete"
     )]
     context_ratio: Option<f32>,
-
-    /// Evaluate commit message generation/completion on a dataset
-    #[arg(
-        long,
-        help = "Evaluate commit message generation/completion on a dataset"
-    )]
-    evaluate: bool,
-
-    /// Path to evaluation dataset (JSON format, required when using --evaluate)
-    #[arg(
-        long,
-        help = "Path to evaluation dataset (JSON format, required when using --evaluate)",
-        requires = "evaluate"
-    )]
-    dataset: Option<String>,
-
-    /// Include history in evaluation
-    #[arg(long, help = "Include history in evaluation", requires = "evaluate")]
-    with_history: bool,
-
-    /// Filter dataset by restrictive filters
-    #[arg(
-        long,
-        help = "Filter dataset by restrictive filters",
-        requires = "evaluate"
-    )]
-    filter_restrictive: bool,
 }
 
 #[tokio::main]
@@ -115,8 +88,6 @@ async fn main() -> Result<()> {
         args.complete,
         args.prefix,
         args.context_ratio,
-        args.with_history,
-        args.filter_restrictive,
     )
     .await
     {

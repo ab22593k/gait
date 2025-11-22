@@ -1,24 +1,30 @@
 use crate::config::Config;
 use anyhow::{Result, anyhow};
+#[cfg(debug_assertions)]
+use chrono::Utc;
 use llm::{
     LLMProvider,
     builder::{LLMBackend, LLMBuilder},
     chat::ChatMessage,
 };
 use log::debug;
+#[cfg(debug_assertions)]
+use log::warn;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
+#[cfg(debug_assertions)]
+use serde_json::{json, to_string};
 use std::collections::HashMap;
+#[cfg(debug_assertions)]
+use std::fs::OpenOptions;
+#[cfg(debug_assertions)]
+use std::io::Write;
+#[cfg(debug_assertions)]
+use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio_retry::Retry;
 use tokio_retry::strategy::ExponentialBackoff;
-use chrono::Utc;
-use serde_json::{json, to_string};
-use std::fs::OpenOptions;
-use std::io::Write;
-use std::path::Path;
-use log::warn;
 
 #[derive(Debug)]
 struct ProviderDefault {
@@ -169,7 +175,15 @@ where
         .map_err(|e| anyhow!("Failed to build provider: {e}"))?;
 
     // Generate the message
-    get_message_with_provider(provider, user_prompt, provider_name, config.debug_llm).await
+    get_message_with_provider(
+        provider,
+        user_prompt,
+        provider_name,
+        #[cfg(debug_assertions)]
+        config.debug_llm,
+        system_prompt,
+    )
+    .await
 }
 
 /// Generates a message using the given provider (mainly for testing purposes)
@@ -177,7 +191,8 @@ pub async fn get_message_with_provider<T>(
     provider: Box<dyn LLMProvider + Send + Sync>,
     user_prompt: &str,
     provider_type: &str,
-    debug_llm: bool,
+    #[cfg(debug_assertions)] debug_llm: bool,
+    system_prompt: &str,
 ) -> Result<T>
 where
     T: DeserializeOwned + JsonSchema,
@@ -207,14 +222,13 @@ where
         match tokio::time::timeout(Duration::from_secs(30), provider.chat(&messages)).await {
             Ok(Ok(response)) => {
                 let response_text = response.text().unwrap_or_default();
-                
+
                 // Debug logging if enabled
+                #[cfg(debug_assertions)]
                 if debug_llm {
-                    // System prompt is not easily accessible here, using empty string
-                    let system_prompt = "";
                     dump_llm_interaction_jsonl(system_prompt, &enhanced_prompt, provider_type, &response_text);
                 }
-                
+
                 debug!("Received response from provider");
 
                 // Provider-specific response parsing
@@ -444,6 +458,7 @@ fn clean_json_from_llm(json_str: &str) -> String {
     without_codeblock[start..end].trim().to_string()
 }
 
+#[cfg(debug_assertions)]
 fn dump_llm_interaction_jsonl(
     system_prompt: &str,
     enhanced_user_prompt: &str,
@@ -462,7 +477,7 @@ fn dump_llm_interaction_jsonl(
     let log_line = match to_string(&entry) {
         Ok(line) => line,
         Err(e) => {
-            warn!("Failed to serialize LLM debug entry: {}", e);
+            warn!("Failed to serialize LLM debug entry: {e}");
             return;
         }
     };
@@ -470,18 +485,18 @@ fn dump_llm_interaction_jsonl(
     // Ensure target/debug directory exists
     let log_dir = Path::new("./target/debug");
     if let Err(e) = std::fs::create_dir_all(log_dir) {
-        warn!("Failed to create debug directory {}: {}", log_dir.display(), e);
+        warn!(
+            "Failed to create debug directory {}: {}",
+            log_dir.display(),
+            e
+        );
         return;
     }
 
-    let log_path = log_dir.join("gait-llm-debug.jsonl");
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-    {
-        if let Err(e) = writeln!(file, "{}", log_line) {
-            warn!("Failed to write LLM debug log: {}", e);
+    let log_path = log_dir.join("llm-debug.jsonl");
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
+        if let Err(e) = writeln!(file, "{log_line}") {
+            warn!("Failed to write LLM debug log: {e}");
         }
     } else {
         warn!("Failed to open LLM debug log file {}", log_path.display());

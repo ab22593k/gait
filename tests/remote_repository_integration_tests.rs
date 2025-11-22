@@ -26,6 +26,8 @@ async fn test_cli_with_remote_repository() -> Result<()> {
 
     // 1. Test ReleaseNotes command with repository URL
     let common = CommonParams {
+        #[cfg(debug_assertions)]
+        debug_llm: false,
         provider: Some("mock".to_string()), // Use mock provider to avoid real API calls
         instructions: None,
         detail_level: "minimal".to_string(),

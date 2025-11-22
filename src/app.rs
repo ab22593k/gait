@@ -258,22 +258,10 @@ pub async fn handle_message(
     complete: bool,
     prefix: Option<String>,
     context_ratio: Option<f32>,
-    with_history: bool,
-    filter_restrictive: bool,
 ) -> anyhow::Result<()> {
     debug!(
-        "Handling 'message' command with common: {:?}, auto_commit: {}, print: {}, verify: {}, amend: {}, commit_ref: {:?}, complete: {}, prefix: {:?}, context_ratio: {:?}, with_history: {}, filter_restrictive: {}",
-        common,
-        config.auto_commit,
-        config.print_only,
-        config.verify,
-        config.amend,
-        config.commit_ref,
-        complete,
-        prefix,
-        context_ratio,
-        with_history,
-        filter_restrictive
+        "Handling 'message' command with common: {common:?}, auto_commit: {}, print: {}, verify: {}, amend: {}, commit_ref: {:?}, complete: {complete}, prefix: {prefix:?}, context_ratio: {context_ratio:?}",
+        config.auto_commit, config.print_only, config.verify, config.amend, config.commit_ref,
     );
 
     if complete {
@@ -362,11 +350,9 @@ pub async fn handle_command(command: GitAI, repository_url: Option<String>) -> a
                     commit_ref: commit,
                 },
                 repository_url,
-                false, // complete
-                None,  // prefix
-                None,  // context_ratio
-                false, // with_history
-                false, // filter_restrictive
+                false,
+                None,
+                None,
             )
             .await
         }
