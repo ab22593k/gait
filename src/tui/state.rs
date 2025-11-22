@@ -281,7 +281,9 @@ mod tests {
         state.selected_files[0] = false;
         state.selected_commits[0] = false;
 
-        let filtered = state.get_filtered_context().unwrap();
+        let filtered = state
+            .get_filtered_context()
+            .expect("Context should be available");
 
         // Should have 1 file and 1 commit
         assert_eq!(filtered.staged_files.len(), 1);

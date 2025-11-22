@@ -7,7 +7,9 @@ mod app;
 mod input_handler;
 pub mod spinner;
 mod state;
+mod theme;
 mod ui;
 
 pub use app::TuiCommit;
 pub use app::run_tui_commit;
+pub use theme::Theme;

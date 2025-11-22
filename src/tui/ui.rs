@@ -8,6 +8,7 @@
 //! - Typography tokens for text styling
 
 use super::state::{Mode, TuiState};
+use super::theme::get_theme;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -17,44 +18,46 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr;
 
-// Design Token Color Palette
-
-// Brand colors
-const COLOR_BRAND_PRIMARY: Color = Color::Blue; // Main accent color for interactive elements
-
-// Text colors
-const COLOR_TEXT_DEFAULT: Color = Color::White; // Standard text color
-const COLOR_TEXT_DIMMED: Color = Color::DarkGray; // Muted text for secondary information
-
-// Background colors
-const COLOR_BACKGROUND_DEFAULT: Color = Color::Black; // Main background
-const COLOR_BACKGROUND_ELEVATED: Color = Color::DarkGray; // For modals/cards
-
-// State colors
-const COLOR_STATE_SUCCESS: Color = Color::Green; // Success messages
-const COLOR_STATE_ERROR: Color = Color::Red; // Error/warning messages
-const COLOR_STATE_INFO: Color = Color::Blue; // Informational messages
-
-// Derived colors for UI states
-const ACCENT_COLOR: Color = COLOR_BRAND_PRIMARY;
-const ACCENT_COLOR_ACTIVE: Color = Color::Cyan; // Brighter version for active elements
-const TEXT_COLOR: Color = COLOR_TEXT_DEFAULT;
-const SUBTLE_COLOR: Color = COLOR_TEXT_DIMMED;
-const BORDER_COLOR: Color = COLOR_BACKGROUND_ELEVATED;
-const BORDER_COLOR_ACTIVE: Color = ACCENT_COLOR_ACTIVE;
-const SUCCESS_COLOR: Color = COLOR_STATE_SUCCESS;
-const WARNING_COLOR: Color = Color::Yellow; // Warning (not in design tokens, keeping existing)
-const ERROR_COLOR: Color = COLOR_STATE_ERROR;
-
 // Spacing Tokens (in character units)
 const SPACING_XS: u16 = 1; // Smallest spacing
 const SPACING_SM: u16 = 2; // Small spacing
 const SPACING_MD: u16 = 4; // Medium, default spacing
 const SPACING_LG: u16 = 8; // Large spacing
 
-// Typography Tokens (using ratatui modifiers)
-const FONT_WEIGHT_REGULAR: Modifier = Modifier::empty();
-const FONT_WEIGHT_BOLD: Modifier = Modifier::BOLD;
+// Helper functions to get theme colors
+fn accent_color() -> Color {
+    get_theme().accent
+}
+fn accent_color_active() -> Color {
+    get_theme().accent_active
+}
+fn text_color() -> Color {
+    get_theme().text_default
+}
+fn subtle_color() -> Color {
+    get_theme().text_dimmed
+}
+fn border_color() -> Color {
+    get_theme().border
+}
+fn border_color_active() -> Color {
+    get_theme().border_active
+}
+fn success_color() -> Color {
+    get_theme().state_success
+}
+fn warning_color() -> Color {
+    get_theme().state_warning
+}
+fn error_color() -> Color {
+    get_theme().state_error
+}
+fn brand_primary_color() -> Color {
+    get_theme().brand_primary
+}
+fn font_weight_bold() -> Modifier {
+    get_theme().font_weight_bold
+}
 
 /// Main UI rendering entry point
 pub fn draw_ui(f: &mut Frame, state: &mut TuiState) {
@@ -165,10 +168,10 @@ fn draw_nav_bar(f: &mut Frame, state: &TuiState, area: Rect) {
                     format!(" {key} "),
                     Style::default()
                         .fg(Color::Black)
-                        .bg(ACCENT_COLOR_ACTIVE)
-                        .add_modifier(FONT_WEIGHT_BOLD),
+                        .bg(accent_color_active())
+                        .add_modifier(font_weight_bold()),
                 ),
-                Span::styled(format!(" {desc} "), Style::default().fg(TEXT_COLOR)),
+                Span::styled(format!(" {desc} "), Style::default().fg(text_color())),
             ];
 
             if i < nav_items.len() - 1 {
@@ -194,9 +197,9 @@ fn draw_commit_message(f: &mut Frame, state: &mut TuiState, area: Rect) {
         _ => {
             let is_editing = state.mode == Mode::EditingMessage;
             let border_color = if is_editing {
-                BORDER_COLOR_ACTIVE
+                border_color_active()
             } else {
-                BORDER_COLOR
+                border_color()
             };
 
             let title = if is_editing {
@@ -210,11 +213,11 @@ fn draw_commit_message(f: &mut Frame, state: &mut TuiState, area: Rect) {
                     title,
                     Style::default()
                         .fg(if is_editing {
-                            ACCENT_COLOR_ACTIVE
+                            accent_color_active()
                         } else {
-                            ACCENT_COLOR
+                            accent_color()
                         })
-                        .add_modifier(FONT_WEIGHT_BOLD),
+                        .add_modifier(font_weight_bold()),
                 ))
                 .title_alignment(ratatui::layout::Alignment::Center)
                 .borders(Borders::ALL)
@@ -225,10 +228,10 @@ fn draw_commit_message(f: &mut Frame, state: &mut TuiState, area: Rect) {
                 state.message_textarea.set_block(message_block);
                 state
                     .message_textarea
-                    .set_style(Style::default().fg(TEXT_COLOR));
+                    .set_style(Style::default().fg(text_color()));
                 state
                     .message_textarea
-                    .set_cursor_style(Style::default().bg(ACCENT_COLOR_ACTIVE).fg(Color::Black));
+                    .set_cursor_style(Style::default().bg(accent_color_active()).fg(Color::Black));
                 f.render_widget(&state.message_textarea, area);
             } else {
                 render_commit_message_content(f, state, message_block, area);
@@ -244,8 +247,8 @@ fn render_commit_message_content(f: &mut Frame, state: &TuiState, block: Block, 
     let title_text = Line::from(vec![Span::styled(
         &current_message.title,
         Style::default()
-            .fg(ACCENT_COLOR_ACTIVE)
-            .add_modifier(Modifier::BOLD),
+            .fg(accent_color_active())
+            .add_modifier(font_weight_bold()),
     )]);
 
     let mut content = vec![
@@ -254,7 +257,7 @@ fn render_commit_message_content(f: &mut Frame, state: &TuiState, block: Block, 
         Line::from(""), // Spacing
         Line::from(vec![Span::styled(
             "─".repeat(area.width.saturating_sub(4) as usize),
-            Style::default().fg(SUBTLE_COLOR),
+            Style::default().fg(subtle_color()),
         )]),
         Line::from(""), // Spacing
     ];
@@ -263,7 +266,7 @@ fn render_commit_message_content(f: &mut Frame, state: &TuiState, block: Block, 
     for line in current_message.message.lines() {
         content.push(Line::from(vec![Span::styled(
             line,
-            Style::default().fg(TEXT_COLOR),
+            Style::default().fg(text_color()),
         )]));
     }
 
@@ -278,9 +281,9 @@ fn render_commit_message_content(f: &mut Frame, state: &TuiState, block: Block, 
 fn draw_instructions(f: &mut Frame, state: &mut TuiState, area: Rect) {
     let is_editing = state.mode == Mode::EditingInstructions;
     let border_color = if is_editing {
-        BORDER_COLOR_ACTIVE
+        border_color_active()
     } else {
-        BORDER_COLOR
+        border_color()
     };
 
     let title = if is_editing {
@@ -294,11 +297,11 @@ fn draw_instructions(f: &mut Frame, state: &mut TuiState, area: Rect) {
             title,
             Style::default()
                 .fg(if is_editing {
-                    ACCENT_COLOR_ACTIVE
+                    accent_color_active()
                 } else {
-                    ACCENT_COLOR
+                    accent_color()
                 })
-                .add_modifier(Modifier::BOLD),
+                .add_modifier(font_weight_bold()),
         ))
         .title_alignment(ratatui::layout::Alignment::Center)
         .borders(Borders::ALL)
@@ -309,15 +312,15 @@ fn draw_instructions(f: &mut Frame, state: &mut TuiState, area: Rect) {
         state.instructions_textarea.set_block(instructions_block);
         state
             .instructions_textarea
-            .set_style(Style::default().fg(TEXT_COLOR));
+            .set_style(Style::default().fg(text_color()));
         state
             .instructions_textarea
-            .set_cursor_style(Style::default().bg(ACCENT_COLOR_ACTIVE).fg(Color::Black));
+            .set_cursor_style(Style::default().bg(accent_color_active()).fg(Color::Black));
         f.render_widget(&state.instructions_textarea, area);
     } else {
         let instructions = Paragraph::new(state.custom_instructions.clone())
             .block(instructions_block)
-            .style(Style::default().fg(SUBTLE_COLOR))
+            .style(Style::default().fg(subtle_color()))
             .wrap(Wrap { trim: true });
         f.render_widget(instructions, area);
     }
@@ -327,7 +330,7 @@ pub fn draw_status(f: &mut Frame, state: &mut TuiState, area: Rect) {
     let (spinner, content, color, _) = get_status_components(state);
 
     let status_line = Line::from(vec![
-        Span::styled(spinner, Style::default().fg(ACCENT_COLOR_ACTIVE)),
+        Span::styled(spinner, Style::default().fg(accent_color_active())),
         Span::raw(" "),
         Span::styled(content, Style::default().fg(color)),
     ]);
@@ -343,13 +346,13 @@ fn get_status_components(state: &mut TuiState) -> (String, String, Color, usize)
         spinner.tick()
     } else {
         let color = if state.status.contains("Error") || state.status.contains("Failed") {
-            ERROR_COLOR
+            error_color()
         } else if state.status.contains("Success") || state.status.contains("Complete") {
-            SUCCESS_COLOR
+            success_color()
         } else if state.status.contains("Warning") {
-            WARNING_COLOR
+            warning_color()
         } else {
-            SUBTLE_COLOR
+            subtle_color()
         };
 
         (
@@ -369,8 +372,8 @@ fn draw_help(f: &mut Frame, _state: &mut TuiState, area: Rect) {
         Line::from(vec![Span::styled(
             "Navigation",
             Style::default()
-                .fg(COLOR_BRAND_PRIMARY)
-                .add_modifier(FONT_WEIGHT_BOLD),
+                .fg(brand_primary_color())
+                .add_modifier(font_weight_bold()),
         )]),
         Line::from(vec![Span::raw("  ←/→        Next/Prev Message")]),
         Line::from(vec![Span::raw("  ↑/↓        Scroll Content")]),
@@ -378,8 +381,8 @@ fn draw_help(f: &mut Frame, _state: &mut TuiState, area: Rect) {
         Line::from(vec![Span::styled(
             "Actions",
             Style::default()
-                .fg(COLOR_BRAND_PRIMARY)
-                .add_modifier(FONT_WEIGHT_BOLD),
+                .fg(brand_primary_color())
+                .add_modifier(font_weight_bold()),
         )]),
         Line::from(vec![Span::raw("  Enter      Commit")]),
         Line::from(vec![Span::raw("  E          Edit Message")]),
@@ -393,7 +396,7 @@ fn draw_help(f: &mut Frame, _state: &mut TuiState, area: Rect) {
         .title_alignment(ratatui::layout::Alignment::Center)
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(COLOR_BRAND_PRIMARY));
+        .border_style(Style::default().fg(brand_primary_color()));
 
     let area = centered_rect(area, 60, 50);
 
@@ -418,20 +421,20 @@ fn draw_completion(f: &mut Frame, state: &mut TuiState, area: Rect) {
         .title(Span::styled(
             title,
             Style::default()
-                .fg(ACCENT_COLOR_ACTIVE)
-                .add_modifier(Modifier::BOLD),
+                .fg(accent_color_active())
+                .add_modifier(font_weight_bold()),
         ))
         .title_alignment(ratatui::layout::Alignment::Center)
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(ACCENT_COLOR_ACTIVE));
+        .border_style(Style::default().fg(accent_color_active()));
 
     let mut completion_lines = Vec::new();
 
     // Add instructions at the top
     completion_lines.push(Line::from(vec![Span::styled(
         "Use Tab/Shift+Tab to navigate, Enter to accept, Esc to cancel",
-        Style::default().fg(SUBTLE_COLOR),
+        Style::default().fg(subtle_color()),
     )]));
     completion_lines.push(Line::from(""));
 
@@ -441,11 +444,11 @@ fn draw_completion(f: &mut Frame, state: &mut TuiState, area: Rect) {
                 ">",
                 Style::default()
                     .fg(Color::Black)
-                    .bg(ACCENT_COLOR_ACTIVE)
-                    .add_modifier(Modifier::BOLD),
+                    .bg(accent_color_active())
+                    .add_modifier(font_weight_bold()),
             )
         } else {
-            (" ", Style::default().fg(TEXT_COLOR))
+            (" ", Style::default().fg(text_color()))
         };
 
         completion_lines.push(Line::from(vec![
@@ -476,24 +479,24 @@ fn draw_context_selection(f: &mut Frame, state: &mut TuiState, area: Rect) {
         .title(Span::styled(
             title,
             Style::default()
-                .fg(ACCENT_COLOR_ACTIVE)
-                .add_modifier(Modifier::BOLD),
+                .fg(accent_color_active())
+                .add_modifier(font_weight_bold()),
         ))
         .title_alignment(ratatui::layout::Alignment::Center)
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(ACCENT_COLOR_ACTIVE));
+        .border_style(Style::default().fg(accent_color_active()));
 
     let mut context_lines = Vec::new();
 
     // Instructions
     context_lines.push(Line::from(vec![Span::styled(
         "Select context to include in commit message generation:",
-        Style::default().fg(SUBTLE_COLOR),
+        Style::default().fg(subtle_color()),
     )]));
     context_lines.push(Line::from(vec![Span::styled(
         "Arrow keys: navigate | Space: toggle | Tab: switch category | Enter: confirm | Esc: cancel",
-        Style::default().fg(SUBTLE_COLOR),
+        Style::default().fg(subtle_color()),
     )]));
     context_lines.push(Line::from(""));
 
@@ -506,12 +509,12 @@ fn draw_context_selection(f: &mut Frame, state: &mut TuiState, area: Rect) {
                     if state.context_selection_category
                         == super::state::ContextSelectionCategory::Files
                     {
-                        ACCENT_COLOR_ACTIVE
+                        accent_color_active()
                     } else {
-                        TEXT_COLOR
+                        text_color()
                     },
                 )
-                .add_modifier(Modifier::BOLD),
+                .add_modifier(font_weight_bold()),
         )]));
 
         for (i, file) in context.staged_files.iter().enumerate() {
@@ -526,10 +529,10 @@ fn draw_context_selection(f: &mut Frame, state: &mut TuiState, area: Rect) {
             let style = if is_current {
                 Style::default()
                     .fg(Color::Black)
-                    .bg(ACCENT_COLOR_ACTIVE)
-                    .add_modifier(Modifier::BOLD)
+                    .bg(accent_color_active())
+                    .add_modifier(font_weight_bold())
             } else {
-                Style::default().fg(TEXT_COLOR)
+                Style::default().fg(text_color())
             };
 
             context_lines.push(Line::from(vec![
@@ -539,7 +542,7 @@ fn draw_context_selection(f: &mut Frame, state: &mut TuiState, area: Rect) {
                 Span::raw(" "),
                 Span::styled(
                     format!("({})", file.change_type),
-                    Style::default().fg(SUBTLE_COLOR),
+                    Style::default().fg(subtle_color()),
                 ),
             ]));
         }
@@ -554,12 +557,12 @@ fn draw_context_selection(f: &mut Frame, state: &mut TuiState, area: Rect) {
                     if state.context_selection_category
                         == super::state::ContextSelectionCategory::Commits
                     {
-                        ACCENT_COLOR_ACTIVE
+                        accent_color_active()
                     } else {
-                        TEXT_COLOR
+                        text_color()
                     },
                 )
-                .add_modifier(Modifier::BOLD),
+                .add_modifier(font_weight_bold()),
         )]));
 
         for (i, commit) in context.recent_commits.iter().enumerate() {
@@ -575,10 +578,10 @@ fn draw_context_selection(f: &mut Frame, state: &mut TuiState, area: Rect) {
             let style = if is_current {
                 Style::default()
                     .fg(Color::Black)
-                    .bg(ACCENT_COLOR_ACTIVE)
-                    .add_modifier(Modifier::BOLD)
+                    .bg(accent_color_active())
+                    .add_modifier(font_weight_bold())
             } else {
-                Style::default().fg(TEXT_COLOR)
+                Style::default().fg(text_color())
             };
 
             // Truncate commit message for display
@@ -591,7 +594,7 @@ fn draw_context_selection(f: &mut Frame, state: &mut TuiState, area: Rect) {
             context_lines.push(Line::from(vec![
                 Span::styled(format!("{marker} {checkbox}"), style),
                 Span::raw(" "),
-                Span::styled(&commit.hash[..7], Style::default().fg(SUBTLE_COLOR)),
+                Span::styled(&commit.hash[..7], Style::default().fg(subtle_color())),
                 Span::raw(" "),
                 Span::styled(short_message, style),
             ]));
@@ -599,7 +602,7 @@ fn draw_context_selection(f: &mut Frame, state: &mut TuiState, area: Rect) {
     } else {
         context_lines.push(Line::from(vec![Span::styled(
             "No context available",
-            Style::default().fg(WARNING_COLOR),
+            Style::default().fg(warning_color()),
         )]));
     }
 

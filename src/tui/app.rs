@@ -1,6 +1,7 @@
 use super::input_handler::{InputResult, handle_input};
 use super::spinner::SpinnerState;
 use super::state::{Mode, TuiState};
+use super::theme::init_theme;
 use super::ui::draw_ui;
 use crate::features::commit::{
     CommitService, completion::CompletionService, format_commit_result, types::GeneratedMessage,
@@ -72,6 +73,9 @@ impl TuiCommit {
     }
 
     pub async fn run_app(&mut self) -> io::Result<()> {
+        // Initialize adaptive theme
+        init_theme();
+
         // Setup
         let default_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic_info: &panic::PanicHookInfo| {
