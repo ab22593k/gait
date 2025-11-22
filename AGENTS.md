@@ -43,7 +43,9 @@
 
 ### Formatting & Style
 
-- Use inline format args: `format!("{user} logged in")` not `format!("{} logged in", user)`
+- **Use inline format args**: `format!("{user} logged in")` not `format!("{} logged in", user)`
+  - This applies to all formatting macros: `format!`, `println!`, `debug!`, `error!`, etc.
+  - Clippy will warn about positional arguments that can be converted to inline format
 - 4-space indentation
 - Line length: ~100 characters
 - Use `String::with_capacity()` when size is known
@@ -68,6 +70,17 @@
 - Use zero-copy operations with slices
 - Pre-allocate collections when possible
 - Profile with `cargo flamegraph` if needed
+
+### Linting & Anti-patterns
+
+- **Always run clippy**: `cargo clippy --all-targets --all-features -- -D warnings`
+- **Avoid unwrap/expect in production code**: Use proper error handling instead
+- **Use inline format args**: `format!("{user} logged in")` not `format!("{} logged in", user)`
+- **Keep functions under 100 lines**: Break large functions into smaller, focused ones
+- **Avoid unnecessary async**: Don't mark functions as async if they don't use await
+- **Handle type conversions carefully**: Be aware of precision loss when casting between numeric types
+- **Use Result types appropriately**: Don't wrap infallible operations in Result
+- **Avoid dead code**: Remove unused functions/variables or mark with `#[allow(dead_code)]` if intentionally unused
 
 ## Architecture Patterns
 

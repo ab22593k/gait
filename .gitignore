@@ -1,5 +1,9 @@
+# Cargo
 /target
+
+# Agents
 .genkit/
 .crush/
 .specify/
 .qwen/
+opencodetmp/
