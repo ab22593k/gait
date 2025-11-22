@@ -97,15 +97,33 @@ fn render_sections(f: &mut Frame, state: &mut TuiState, chunks: &[Rect]) {
     draw_status(f, state, chunks[chunk_index]);
 }
 
-fn draw_nav_bar(f: &mut Frame, _state: &TuiState, area: Rect) {
-    let nav_items: Vec<(&str, &str)> = vec![
-        ("Tab/Shift+Tab", "Nav"),
-        ("E", "Edit Msg"),
-        ("I", "Edit Instr"),
-        ("R", "Regen"),
-        ("Enter", "Commit"),
-        ("Esc", "Cancel"),
-    ];
+fn draw_nav_bar(f: &mut Frame, state: &TuiState, area: Rect) {
+    let nav_items: Vec<(&str, &str)> = match state.mode {
+        Mode::Completing => vec![
+            ("Tab/Shift+Tab", "Navigate"),
+            ("Enter", "Accept"),
+            ("Esc", "Cancel"),
+        ],
+        Mode::ContextSelection => vec![
+            ("↑/↓", "Navigate"),
+            ("Space", "Toggle"),
+            ("Tab", "Category"),
+            ("Enter", "Confirm"),
+            ("Esc", "Cancel"),
+        ],
+        Mode::EditingMessage => vec![("Tab", "Complete"), ("Esc", "Finish")],
+        Mode::EditingInstructions => vec![("Esc", "Finish")],
+        Mode::Help => vec![("Any Key", "Close")],
+        _ => vec![
+            ("←/→", "Navigate"),
+            ("E", "Edit Msg"),
+            ("I", "Edit Instr"),
+            ("C", "Context"),
+            ("R", "Regen"),
+            ("Enter", "Commit"),
+            ("Esc", "Cancel"),
+        ],
+    };
 
     let nav_spans = nav_items
         .iter()
@@ -141,6 +159,7 @@ fn draw_commit_message(f: &mut Frame, state: &mut TuiState, area: Rect) {
     match state.mode {
         Mode::Help => draw_help(f, state, area),
         Mode::Completing => draw_completion(f, state, area),
+        Mode::ContextSelection => draw_context_selection(f, state, area),
         _ => {
             let is_editing = state.mode == Mode::EditingMessage;
             let border_color = if is_editing {
@@ -150,7 +169,7 @@ fn draw_commit_message(f: &mut Frame, state: &mut TuiState, area: Rect) {
             };
 
             let title = if is_editing {
-                " ✎ Edit Message "
+                " Edit Message "
             } else {
                 " Commit Message "
             };
@@ -234,7 +253,7 @@ fn draw_instructions(f: &mut Frame, state: &mut TuiState, area: Rect) {
     };
 
     let title = if is_editing {
-        " ✎ Edit Instructions "
+        " Edit Instructions "
     } else {
         " Custom Instructions "
     };
@@ -359,7 +378,7 @@ fn draw_help(f: &mut Frame, _state: &mut TuiState, area: Rect) {
 
 fn draw_completion(f: &mut Frame, state: &mut TuiState, area: Rect) {
     let title = format!(
-        " Suggestions ({}/{}) ",
+        " Completion Suggestions ({}/{}) ",
         state.completion_index + 1,
         state.completion_suggestions.len()
     );
@@ -368,34 +387,45 @@ fn draw_completion(f: &mut Frame, state: &mut TuiState, area: Rect) {
         .title(Span::styled(
             title,
             Style::default()
-                .fg(ACCENT_COLOR)
+                .fg(ACCENT_COLOR_ACTIVE)
                 .add_modifier(Modifier::BOLD),
         ))
+        .title_alignment(ratatui::layout::Alignment::Center)
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(ACCENT_COLOR_ACTIVE));
 
     let mut completion_lines = Vec::new();
 
+    // Add instructions at the top
+    completion_lines.push(Line::from(vec![Span::styled(
+        "Use Tab/Shift+Tab to navigate, Enter to accept, Esc to cancel",
+        Style::default().fg(SUBTLE_COLOR),
+    )]));
+    completion_lines.push(Line::from(""));
+
     for (i, suggestion) in state.completion_suggestions.iter().enumerate() {
-        let style = if i == state.completion_index {
-            Style::default()
-                .fg(Color::Black)
-                .bg(ACCENT_COLOR_ACTIVE)
-                .add_modifier(Modifier::BOLD)
+        let (marker, style) = if i == state.completion_index {
+            (
+                ">",
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(ACCENT_COLOR_ACTIVE)
+                    .add_modifier(Modifier::BOLD),
+            )
         } else {
-            Style::default().fg(TEXT_COLOR)
+            (" ", Style::default().fg(TEXT_COLOR))
         };
-        // Pad the selection for better look
-        completion_lines.push(Line::from(vec![Span::styled(
-            format!(" {suggestion} "),
-            style,
-        )]));
+
+        completion_lines.push(Line::from(vec![
+            Span::styled(marker, style),
+            Span::raw(" "),
+            Span::styled(suggestion, style),
+        ]));
     }
 
-    // Position completion box near the cursor or centered for now
-    // For simplicity in this modernization, let's center it but make it smaller
-    let area = centered_rect(area, 50, 40);
+    // Position completion box - make it wider for better readability
+    let area = centered_rect(area, 70, 50);
 
     f.render_widget(Clear, area);
 
@@ -405,6 +435,149 @@ fn draw_completion(f: &mut Frame, state: &mut TuiState, area: Rect) {
         .wrap(Wrap { trim: true });
 
     f.render_widget(completion_paragraph, area);
+}
+
+#[allow(clippy::too_many_lines)]
+fn draw_context_selection(f: &mut Frame, state: &mut TuiState, area: Rect) {
+    let title = " Context Selection ";
+
+    let context_block = Block::default()
+        .title(Span::styled(
+            title,
+            Style::default()
+                .fg(ACCENT_COLOR_ACTIVE)
+                .add_modifier(Modifier::BOLD),
+        ))
+        .title_alignment(ratatui::layout::Alignment::Center)
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(ACCENT_COLOR_ACTIVE));
+
+    let mut context_lines = Vec::new();
+
+    // Instructions
+    context_lines.push(Line::from(vec![Span::styled(
+        "Select context to include in commit message generation:",
+        Style::default().fg(SUBTLE_COLOR),
+    )]));
+    context_lines.push(Line::from(vec![Span::styled(
+        "Arrow keys: navigate | Space: toggle | Tab: switch category | Enter: confirm | Esc: cancel",
+        Style::default().fg(SUBTLE_COLOR),
+    )]));
+    context_lines.push(Line::from(""));
+
+    if let Some(context) = &state.context {
+        // Files section
+        context_lines.push(Line::from(vec![Span::styled(
+            "Files:",
+            Style::default()
+                .fg(
+                    if state.context_selection_category
+                        == super::state::ContextSelectionCategory::Files
+                    {
+                        ACCENT_COLOR_ACTIVE
+                    } else {
+                        TEXT_COLOR
+                    },
+                )
+                .add_modifier(Modifier::BOLD),
+        )]));
+
+        for (i, file) in context.staged_files.iter().enumerate() {
+            let is_selected = state.selected_files.get(i).copied().unwrap_or(true);
+            let is_current = state.context_selection_category
+                == super::state::ContextSelectionCategory::Files
+                && state.context_selection_index == i;
+
+            let marker = if is_current { ">" } else { " " };
+            let checkbox = if is_selected { "[x]" } else { "[ ]" };
+
+            let style = if is_current {
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(ACCENT_COLOR_ACTIVE)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(TEXT_COLOR)
+            };
+
+            context_lines.push(Line::from(vec![
+                Span::styled(format!("{marker} {checkbox}"), style),
+                Span::raw(" "),
+                Span::styled(&file.path, style),
+                Span::raw(" "),
+                Span::styled(
+                    format!("({})", file.change_type),
+                    Style::default().fg(SUBTLE_COLOR),
+                ),
+            ]));
+        }
+
+        context_lines.push(Line::from(""));
+
+        // Commits section
+        context_lines.push(Line::from(vec![Span::styled(
+            "Recent Commits:",
+            Style::default()
+                .fg(
+                    if state.context_selection_category
+                        == super::state::ContextSelectionCategory::Commits
+                    {
+                        ACCENT_COLOR_ACTIVE
+                    } else {
+                        TEXT_COLOR
+                    },
+                )
+                .add_modifier(Modifier::BOLD),
+        )]));
+
+        for (i, commit) in context.recent_commits.iter().enumerate() {
+            let file_index = context.staged_files.len() + i;
+            let is_selected = state.selected_commits.get(i).copied().unwrap_or(true);
+            let is_current = state.context_selection_category
+                == super::state::ContextSelectionCategory::Commits
+                && state.context_selection_index == file_index;
+
+            let marker = if is_current { ">" } else { " " };
+            let checkbox = if is_selected { "[x]" } else { "[ ]" };
+
+            let style = if is_current {
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(ACCENT_COLOR_ACTIVE)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(TEXT_COLOR)
+            };
+
+            // Truncate commit message for display
+            let short_message = if commit.message.len() > 60 {
+                format!("{}...", &commit.message[..57])
+            } else {
+                commit.message.clone()
+            };
+
+            context_lines.push(Line::from(vec![
+                Span::styled(format!("{marker} {checkbox}"), style),
+                Span::raw(" "),
+                Span::styled(&commit.hash[..7], Style::default().fg(SUBTLE_COLOR)),
+                Span::raw(" "),
+                Span::styled(short_message, style),
+            ]));
+        }
+    } else {
+        context_lines.push(Line::from(vec![Span::styled(
+            "No context available",
+            Style::default().fg(WARNING_COLOR),
+        )]));
+    }
+
+    let context_paragraph = Paragraph::new(context_lines)
+        .block(context_block)
+        .style(Style::default())
+        .wrap(Wrap { trim: true });
+
+    f.render_widget(context_paragraph, area);
 }
 
 /// Helper to center a rect

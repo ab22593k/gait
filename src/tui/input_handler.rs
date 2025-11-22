@@ -4,11 +4,16 @@ use super::state::Mode;
 
 pub trait TuiApp {
     fn get_state(&mut self) -> &mut super::state::TuiState;
+    fn handle_regenerate(&mut self);
 }
 
 impl TuiApp for TuiCommit {
     fn get_state(&mut self) -> &mut super::state::TuiState {
         &mut self.state
+    }
+
+    fn handle_regenerate(&mut self) {
+        self.handle_regenerate();
     }
 }
 
@@ -31,6 +36,7 @@ pub async fn handle_input<A: TuiApp>(app: &mut A, key: KeyEvent) -> InputResult 
         Mode::EditingInstructions => handle_editing_instructions(app, key),
         Mode::Help => handle_help(app, key),
         Mode::Completing => handle_completing(app, key),
+        Mode::ContextSelection => handle_context_selection(app, key),
         Mode::Generating => {
             if key.code == KeyCode::Esc {
                 let state = app.get_state();
@@ -62,7 +68,14 @@ fn handle_normal_mode<A: TuiApp>(app: &mut A, key: KeyEvent) -> InputResult {
             InputResult::Continue
         }
         KeyCode::Char('R') => {
-            // Regenerate is only for commit mode
+            // Trigger regeneration of the current message
+            app.handle_regenerate();
+            InputResult::Continue
+        }
+        KeyCode::Char('C') => {
+            // Enter context selection mode
+            state.mode = Mode::ContextSelection;
+            state.set_status(String::from("Context Selection: Use arrow keys to navigate, Space to toggle, Enter to confirm, Esc to cancel"));
             InputResult::Continue
         }
         KeyCode::Left | KeyCode::Char('l') => {
@@ -143,9 +156,16 @@ fn handle_editing_message<A: TuiApp>(app: &mut A, key: KeyEvent) -> InputResult 
         // Trigger completion
         let current_text = state.message_textarea.lines().join("\n");
         let prefix = current_text.lines().next().unwrap_or("").to_string();
-        state.pending_completion_prefix = Some(prefix);
-        state.mode = Mode::Completing;
-        state.set_status(String::from("Generating completion suggestions..."));
+
+        if prefix.trim().is_empty() {
+            state.set_status(String::from(
+                "Cannot complete empty message. Type something first.",
+            ));
+        } else {
+            state.pending_completion_prefix = Some(prefix);
+            state.mode = Mode::Completing;
+            state.set_status(String::from("Generating completion suggestions..."));
+        }
         InputResult::Continue
     } else {
         state.message_textarea.input(key);
@@ -178,14 +198,25 @@ fn handle_completing<A: TuiApp>(app: &mut A, key: KeyEvent) -> InputResult {
     let state = app.get_state();
     match key.code {
         KeyCode::Tab => {
-            // Cycle through completion suggestions
+            // Cycle forward through completion suggestions
             if !state.completion_suggestions.is_empty() {
                 state.completion_index =
                     (state.completion_index + 1) % state.completion_suggestions.len();
-                // Apply the current suggestion
                 let suggestion = &state.completion_suggestions[state.completion_index];
-                // For now, just update the status to show the suggestion
-                state.set_status(format!("Completion: {suggestion}"));
+                state.set_status(format!("Selected: {suggestion}"));
+            }
+            InputResult::Continue
+        }
+        KeyCode::BackTab => {
+            // Cycle backward through completion suggestions (Shift+Tab)
+            if !state.completion_suggestions.is_empty() {
+                if state.completion_index == 0 {
+                    state.completion_index = state.completion_suggestions.len() - 1;
+                } else {
+                    state.completion_index -= 1;
+                }
+                let suggestion = &state.completion_suggestions[state.completion_index];
+                state.set_status(format!("Selected: {suggestion}"));
             }
             InputResult::Continue
         }
@@ -218,6 +249,45 @@ fn handle_completing<A: TuiApp>(app: &mut A, key: KeyEvent) -> InputResult {
             // Pass the key to the editing handler
             handle_editing_message(app, key)
         }
+    }
+}
+
+fn handle_context_selection<A: TuiApp>(app: &mut A, key: KeyEvent) -> InputResult {
+    let state = app.get_state();
+    match key.code {
+        KeyCode::Up => {
+            state.move_selection_up();
+            InputResult::Continue
+        }
+        KeyCode::Down => {
+            state.move_selection_down();
+            InputResult::Continue
+        }
+        KeyCode::Char(' ') => {
+            // Space to toggle selection
+            state.toggle_current_selection();
+            InputResult::Continue
+        }
+        KeyCode::Tab => {
+            // Tab to switch categories
+            state.next_category();
+            InputResult::Continue
+        }
+        KeyCode::Enter => {
+            // Confirm selection and return to normal mode
+            state.mode = Mode::Normal;
+            state.set_status(String::from(
+                "Context selection confirmed. Press 'R' to regenerate with selected context.",
+            ));
+            InputResult::Continue
+        }
+        KeyCode::Esc => {
+            // Cancel and return to normal mode
+            state.mode = Mode::Normal;
+            state.set_status(String::from("Context selection cancelled."));
+            InputResult::Continue
+        }
+        _ => InputResult::Continue,
     }
 }
 

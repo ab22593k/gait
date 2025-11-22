@@ -248,6 +248,44 @@ impl CommitService {
         Ok(generated_message)
     }
 
+    /// Generate a commit message using AI with custom context
+    ///
+    /// # Arguments
+    ///
+    /// * `instructions` - Custom instructions for the AI
+    /// * `context` - The context to use for generation
+    ///
+    /// # Returns
+    ///
+    /// A Result containing the generated message or an error
+    pub async fn generate_message_with_context(
+        &self,
+        instructions: &str,
+        context: CommitContext,
+    ) -> anyhow::Result<GeneratedMessage> {
+        let mut config_clone = self.config.clone();
+
+        config_clone.instructions = instructions.to_string();
+
+        // Create system prompt
+        let system_prompt = create_system_prompt(&config_clone)?;
+
+        // Use the shared optimization logic with provided context
+        let (_, final_user_prompt) = self
+            .optimize_prompt(&config_clone, &system_prompt, context, create_user_prompt)
+            .await;
+
+        let generated_message = llm::get_message::<GeneratedMessage>(
+            &config_clone,
+            &self.provider_name,
+            &system_prompt,
+            &final_user_prompt,
+        )
+        .await?;
+
+        Ok(generated_message)
+    }
+
     /// Generate a PR description for a commit range
     ///
     /// # Arguments

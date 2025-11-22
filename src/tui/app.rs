@@ -44,6 +44,13 @@ impl TuiCommit {
         }
     }
 
+    /// Initialize context for selection (call this after creation)
+    pub async fn initialize_context(&mut self) -> Result<(), anyhow::Error> {
+        let context = self.service.get_git_info().await?;
+        self.state.initialize_context(context);
+        Ok(())
+    }
+
     #[allow(clippy::unused_async)]
     pub async fn run(
         initial_messages: Vec<GeneratedMessage>,
@@ -57,6 +64,11 @@ impl TuiCommit {
             service,
             completion_service,
         );
+
+        // Initialize context for selection
+        if let Err(e) = app.initialize_context().await {
+            debug!("Failed to initialize context: {e}");
+        }
 
         app.run_app().await.map_err(Error::from)
     }
@@ -126,11 +138,19 @@ impl TuiCommit {
             if self.state.mode == Mode::Generating && !task_spawned {
                 let service = self.service.clone();
                 let instructions = self.state.custom_instructions.clone();
+                let filtered_context = self.state.get_filtered_context();
                 let tx = tx.clone();
 
                 tokio::spawn(async move {
                     debug!("Generating message...");
-                    let result = service.generate_message(&instructions).await;
+                    // Use filtered context if available, otherwise use default
+                    let result = if let Some(context) = filtered_context {
+                        service
+                            .generate_message_with_context(&instructions, context)
+                            .await
+                    } else {
+                        service.generate_message(&instructions).await
+                    };
                     let _ = tx.send(result).await;
                 });
 
@@ -141,20 +161,31 @@ impl TuiCommit {
             if let Some(prefix) = &self.state.pending_completion_prefix.clone()
                 && !completion_task_spawned
             {
-                let _completion_service = self.completion_service.clone();
+                let completion_service = self.completion_service.clone();
                 let prefix = prefix.clone();
                 let completion_tx = completion_tx.clone();
 
                 tokio::spawn(async move {
                     debug!("Generating completion for prefix: {prefix}");
-                    // For now, generate some mock suggestions based on the prefix
-                    // In the future, this should call completion_service.complete_message
-                    let suggestions = vec![
-                        format!("{}: add new feature", prefix),
-                        format!("{}: fix bug", prefix),
-                        format!("{}: update documentation", prefix),
-                    ];
-                    let _ = completion_tx.send(Ok(suggestions)).await;
+                    // Generate real completion suggestions using the completion service
+                    match completion_service.complete_message(&prefix, 0.5).await {
+                        Ok(completed_message) => {
+                            // Extract the completed title as a suggestion
+                            let suggestion = completed_message.title;
+                            let suggestions = vec![suggestion];
+                            let _ = completion_tx.send(Ok(suggestions)).await;
+                        }
+                        Err(e) => {
+                            debug!("Completion failed: {e}");
+                            // Fallback to basic suggestions if completion fails
+                            let suggestions = vec![
+                                format!("{}: add new feature", prefix),
+                                format!("{}: fix bug", prefix),
+                                format!("{}: update documentation", prefix),
+                            ];
+                            let _ = completion_tx.send(Ok(suggestions)).await;
+                        }
+                    }
                 });
 
                 completion_task_spawned = true;
@@ -178,8 +209,9 @@ impl TuiCommit {
                     Err(e) => {
                         self.state.mode = Mode::Normal; // Exit Generating mode
                         self.state.spinner = None; // Stop the spinner
-                        self.state
-                            .set_status(format!("Failed to generate new message: {e}. Press 'r' to retry or 'Esc' to exit."));
+                        self.state.set_status(format!(
+                            "Generation failed: {e}. Press 'R' to retry or 'Esc' to exit."
+                        ));
                         task_spawned = false; // Reset for future regenerations
                     }
                 },
@@ -201,8 +233,9 @@ impl TuiCommit {
                         completion_task_spawned = false;
                     }
                     Err(e) => {
-                        self.state
-                            .set_status(format!("Failed to get completions: {e}"));
+                        self.state.set_status(format!(
+                            "Completion failed: {e}. Press Tab to retry or continue editing."
+                        ));
                         self.state.mode = Mode::EditingMessage;
                         completion_task_spawned = false;
                     }
@@ -242,7 +275,9 @@ impl TuiCommit {
                     InputResult::Commit(message) => match self.perform_commit(&message) {
                         Ok(status) => return Ok(status),
                         Err(e) => {
-                            self.state.set_status(format!("Commit failed: {e}"));
+                            self.state.set_status(format!(
+                                "Commit failed: {e}. Check your staged changes and try again."
+                            ));
                             self.state.dirty = true;
                         }
                     },
@@ -268,6 +303,8 @@ impl TuiCommit {
     pub fn handle_regenerate(&mut self) {
         self.state.mode = Mode::Generating;
         self.state.spinner = Some(SpinnerState::new());
+        self.state
+            .set_status(String::from("Regenerating commit message..."));
     }
 
     pub fn perform_commit(&self, message: &str) -> Result<ExitStatus, Error> {
